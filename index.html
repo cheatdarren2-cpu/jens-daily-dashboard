@@ -1016,14 +1016,24 @@
     // 6. REMOTE PHONE ADMIN UPLOADER (#admin)
     // =========================================================
     function checkAdminHash() {
-      if (window.location.hash === "#admin") {
-        document.getElementById("adminPanel").style.display = "block";
-        document.getElementById("admGistId").value = localStorage.getItem("adm_gist_id") || (DEFAULT_GIST_ID !== "YOUR_GIST_ID_HERE" ? DEFAULT_GIST_ID : "");
-        document.getElementById("admToken").value = localStorage.getItem("adm_token") || "";
-        document.getElementById("admPass").value = localStorage.getItem("adm_pass") || "";
-        loadAdminPhotoList();
-      }
+  if (window.location.hash === "#admin") {
+    // Simple master password protection
+    var masterPass = "!@#123QWEasd";   // ← change this to whatever you want
+    var saved = localStorage.getItem("adm_unlocked");
+
+    if (saved === "yes" || prompt("Enter admin password:") === masterPass) {
+      localStorage.setItem("adm_unlocked", "yes");
+      document.getElementById("adminPanel").style.display = "block";
+      document.getElementById("admGistId").value = localStorage.getItem("adm_gist_id") || (DEFAULT_GIST_ID !== "YOUR_GIST_ID_HERE" ? DEFAULT_GIST_ID : "");
+      document.getElementById("admToken").value = localStorage.getItem("adm_token") || "";
+      document.getElementById("admPass").value = localStorage.getItem("adm_pass") || "";
+      loadAdminPhotoList();
+    } else {
+      alert("Wrong password");
+      history.replaceState(null, "", window.location.pathname);
     }
+  }
+}
 
     function closeAdmin() {
       document.getElementById("adminPanel").style.display = "none";
@@ -1036,14 +1046,14 @@
         reader.onload = function(e) {
           var img = new Image();
           img.onload = function() {
-            var maxW = 800;
+            var maxW = 700;
             var scale = img.width > maxW ? maxW / img.width : 1;
             var canvas = document.createElement("canvas");
             canvas.width = Math.round(img.width * scale);
             canvas.height = Math.round(img.height * scale);
             var ctx = canvas.getContext("2d");
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            resolve(canvas.toDataURL("image/jpeg", 0.70));
+            resolve(canvas.toDataURL("image/jpeg", 0.60));
           };
           img.src = e.target.result;
         };
