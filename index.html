@@ -549,7 +549,7 @@
     // =========================================================
     // CONFIGURATION: Paste your GitHub Gist ID below
     // =========================================================
-    var DEFAULT_GIST_ID = "3d92b546c1b9ea550f170ad4ccec006d";
+    var DEFAULT_GIST_ID = "1ed61d570382149272433f66720a12fd";
 
     // Default fallback coordinates: Petaling Jaya, Malaysia
     var FALLBACK_LAT = 3.1073;
@@ -1036,14 +1036,14 @@
         reader.onload = function(e) {
           var img = new Image();
           img.onload = function() {
-            var maxW = 900;
+            var maxW = 800;
             var scale = img.width > maxW ? maxW / img.width : 1;
             var canvas = document.createElement("canvas");
             canvas.width = Math.round(img.width * scale);
             canvas.height = Math.round(img.height * scale);
             var ctx = canvas.getContext("2d");
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            resolve(canvas.toDataURL("image/jpeg", 0.76));
+            resolve(canvas.toDataURL("image/jpeg", 0.70));
           };
           img.src = e.target.result;
         };
