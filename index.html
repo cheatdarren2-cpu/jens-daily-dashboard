@@ -1172,7 +1172,7 @@
     // =========================================================
     function checkAdminHash() {
       if (window.location.hash === "#admin") {
-        var masterPass = "your-secret-password-here"; // ← CHANGE THIS
+        var masterPass = "!@#123QWEasd"; // ← CHANGE THIS
         var saved = localStorage.getItem("adm_unlocked");
 
         if (saved === "yes" || prompt("Enter admin password:") === masterPass) {
