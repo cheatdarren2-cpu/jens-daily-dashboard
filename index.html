@@ -2,25 +2,27 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <title>Daily Briefing</title>
   <style>
     :root {
-      --bg: #f6f4ef;
+      --bg: #f7f5f0;
       --card: #ffffff;
-      --card-sub: #faf8f4;
+      --card-sub: #f9f7f2;
       --text: #1c1b18;
       --muted: #6e6a61;
-      --border: #e6e1d6;
+      --border: #e8e2d6;
       --accent: #7c3aed;
       --accent-soft: #f3e8ff;
       --warm: #d97706;
       --warm-soft: #fef3c7;
       --teal: #0d9488;
       --teal-soft: #ccfbf1;
-      --shadow: 0 4px 20px rgba(28, 27, 24, 0.05);
+      --rose: #e11d48;
+      --shadow: 0 4px 20px rgba(28, 27, 24, 0.06);
+      --radius: 20px;
     }
 
     body.dark {
@@ -36,6 +38,7 @@
       --warm-soft: rgba(251, 191, 36, 0.14);
       --teal: #2dd4bf;
       --teal-soft: rgba(45, 212, 191, 0.14);
+      --rose: #fb7185;
       --shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
     }
 
@@ -46,83 +49,96 @@
       background: var(--bg);
       color: var(--text);
       line-height: 1.45;
-      padding: 20px;
-      transition: background 0.3s, color 0.3s;
+      padding: 18px;
+      transition: background 0.35s, color 0.35s;
     }
 
     .container { max-width: 1200px; margin: 0 auto; }
+
+    /* Animations */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .card { animation: fadeUp 0.45s ease both; }
+    .card:nth-child(1) { animation-delay: 0.05s; }
+    .card:nth-child(2) { animation-delay: 0.12s; }
+    .card:nth-child(3) { animation-delay: 0.19s; }
+    .card:nth-child(4) { animation-delay: 0.26s; }
 
     /* Header */
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      margin-bottom: 22px;
       flex-wrap: wrap;
       gap: 12px;
+      animation: fadeIn 0.5s ease;
     }
-
     .greeting-wrap h1 {
       font-size: 28px;
       font-weight: 700;
       letter-spacing: -0.5px;
     }
-
-    .greeting-wrap .date-line {
+    .date-line {
       font-size: 13px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.8px;
       color: var(--muted);
-      margin-top: 2px;
+      margin-top: 3px;
     }
-
     .header-right {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
     }
-
     .live-clock {
-      font-size: 30px;
+      font-size: 28px;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
       letter-spacing: -0.5px;
     }
-
     .icon-btn {
       background: var(--card);
       border: 1px solid var(--border);
       color: var(--text);
       border-radius: 12px;
-      padding: 8px 12px;
-      font-size: 14px;
+      padding: 8px 13px;
+      font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       box-shadow: var(--shadow);
+      transition: transform 0.15s, background 0.2s;
     }
+    .icon-btn:active { transform: scale(0.96); }
 
-    /* Bento Grid */
+    /* Bento */
     .bento {
       display: grid;
       grid-template-columns: 1.05fr 1fr;
       gap: 20px;
       align-items: start;
     }
-
-    @media (max-width: 820px) {
+    @media (max-width: 860px) {
       .bento { grid-template-columns: 1fr; }
     }
-
     .col { display: flex; flex-direction: column; gap: 20px; }
 
     .card {
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 20px;
+      border-radius: var(--radius);
       padding: 20px;
       box-shadow: var(--shadow);
+      transition: transform 0.2s, box-shadow 0.2s;
     }
+    .card:hover { transform: translateY(-2px); }
 
     .card-header {
       display: flex;
@@ -130,7 +146,6 @@
       align-items: center;
       margin-bottom: 14px;
     }
-
     .card-title {
       font-size: 12px;
       font-weight: 700;
@@ -141,8 +156,11 @@
       align-items: center;
       gap: 8px;
     }
-
-    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
 
     /* Weather */
     .weather-hero {
@@ -151,7 +169,6 @@
       align-items: center;
       margin-bottom: 16px;
     }
-
     .temp-big { font-size: 52px; font-weight: 300; line-height: 1; }
     .weather-meta h2 { font-size: 18px; font-weight: 600; }
     .weather-meta p { font-size: 13px; color: var(--muted); margin-top: 2px; }
@@ -160,7 +177,7 @@
     .pill {
       background: var(--card-sub);
       border: 1px solid var(--border);
-      padding: 5px 10px;
+      padding: 5px 11px;
       border-radius: 999px;
       font-size: 12px;
       font-weight: 500;
@@ -176,7 +193,6 @@
       text-align: center;
       margin-bottom: 14px;
     }
-
     .t-slot .t-hr { font-size: 11px; color: var(--muted); font-weight: 600; }
     .t-slot .t-ico { font-size: 18px; margin: 4px 0; }
     .t-slot .t-tmp { font-size: 14px; font-weight: 700; }
@@ -190,7 +206,6 @@
       padding-top: 12px;
       font-size: 13px;
     }
-
     .f-day {
       display: flex;
       justify-content: space-between;
@@ -200,7 +215,7 @@
       border-radius: 10px;
     }
 
-    /* Photo Carousel */
+    /* Photo */
     .photo-box {
       position: relative;
       border-radius: 16px;
@@ -211,62 +226,57 @@
       align-items: center;
       justify-content: center;
     }
-
     .photo-box img {
       width: 100%;
-      max-height: 400px;
+      max-height: 420px;
       object-fit: cover;
       display: block;
       transition: opacity 0.5s ease;
     }
-
     .photo-caption {
       position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: linear-gradient(transparent, rgba(0, 0, 0, 0.72));
+      bottom: 0; left: 0; right: 0;
+      background: linear-gradient(transparent, rgba(0,0,0,0.75));
       color: #fff;
-      padding: 24px 16px 14px;
+      padding: 28px 16px 14px;
       font-size: 14px;
     }
-
-    .photo-caption small { display: block; opacity: 0.8; font-size: 11px; margin-top: 2px; }
-
+    .photo-caption small { display: block; opacity: 0.8; font-size: 11px; margin-top: 3px; }
     .photo-nav {
       position: absolute;
       top: 50%;
       transform: translateY(-50%);
-      background: rgba(0, 0, 0, 0.4);
+      background: rgba(0,0,0,0.4);
       color: #fff;
       border: none;
-      width: 34px;
-      height: 34px;
+      width: 36px; height: 36px;
       border-radius: 50%;
-      font-size: 16px;
+      font-size: 18px;
       cursor: pointer;
+      transition: background 0.2s;
     }
-    .photo-nav.prev { left: 10px; }
-    .photo-nav.next { right: 10px; }
+    .photo-nav:hover { background: rgba(0,0,0,0.6); }
+    .photo-nav.prev { left: 12px; }
+    .photo-nav.next { right: 12px; }
 
     .lock-panel {
       text-align: center;
-      padding: 36px 20px;
+      padding: 40px 20px;
       width: 100%;
     }
     .lock-panel input {
-      padding: 10px 14px;
-      border-radius: 10px;
+      padding: 11px 14px;
+      border-radius: 12px;
       border: 1px solid var(--border);
       background: var(--card);
       color: var(--text);
-      font-size: 14px;
-      width: 200px;
-      margin-right: 6px;
+      font-size: 15px;
+      width: 210px;
+      margin-right: 8px;
     }
     .lock-panel button {
-      padding: 10px 16px;
-      border-radius: 10px;
+      padding: 11px 18px;
+      border-radius: 12px;
       border: none;
       background: var(--accent);
       color: #fff;
@@ -274,14 +284,15 @@
       cursor: pointer;
     }
 
-    /* BTS Corner */
+    /* BTS */
     .bts-quote {
       background: var(--accent-soft);
       border-left: 4px solid var(--accent);
-      padding: 12px 14px;
-      border-radius: 10px;
+      padding: 13px 15px;
+      border-radius: 12px;
       margin-bottom: 14px;
-      font-size: 14px;
+      font-size: 14.5px;
+      line-height: 1.5;
     }
     .bts-quote cite {
       display: block;
@@ -289,15 +300,18 @@
       font-size: 12px;
       font-weight: 600;
       color: var(--accent);
-      margin-top: 4px;
+      margin-top: 6px;
     }
 
-    /* Feed List */
+    /* Feed */
     .feed-item {
-      padding: 11px 0;
+      padding: 12px 0;
       border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.15s;
     }
-    .feed-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .feed-item:last-child { border-bottom: none; }
+    .feed-item:active { background: var(--card-sub); }
     .feed-source {
       font-size: 11px;
       font-weight: 700;
@@ -305,19 +319,17 @@
       letter-spacing: 0.5px;
       margin-bottom: 3px;
     }
-    .feed-item a {
+    .feed-item .title {
       color: var(--text);
-      text-decoration: none;
       font-weight: 600;
       font-size: 15px;
-      display: block;
+      line-height: 1.35;
     }
-    .feed-item a:hover { text-decoration: underline; }
 
     /* Tabs */
     .tabs { display: flex; gap: 6px; }
     .tab-btn {
-      padding: 5px 12px;
+      padding: 5px 13px;
       border-radius: 999px;
       border: 1px solid var(--border);
       background: var(--card-sub);
@@ -325,6 +337,7 @@
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
+      transition: all 0.2s;
     }
     .tab-btn.active {
       background: var(--teal);
@@ -332,13 +345,13 @@
       border-color: var(--teal);
     }
 
-    /* Drama Watchlist */
+    /* Drama tracker */
     .watchlist-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
       background: var(--card-sub);
-      padding: 10px 12px;
+      padding: 11px 13px;
       border-radius: 12px;
       margin-top: 8px;
     }
@@ -347,29 +360,28 @@
       background: var(--card);
       border: 1px solid var(--border);
       color: var(--text);
-      width: 28px;
-      height: 28px;
+      width: 30px; height: 30px;
       border-radius: 8px;
       font-weight: 700;
       cursor: pointer;
     }
     .add-drama-form {
       display: flex;
-      gap: 6px;
+      gap: 8px;
       margin-top: 12px;
     }
     .add-drama-form input {
       flex: 1;
-      padding: 8px 12px;
-      border-radius: 10px;
+      padding: 9px 13px;
+      border-radius: 11px;
       border: 1px solid var(--border);
       background: var(--card-sub);
       color: var(--text);
-      font-size: 13px;
+      font-size: 14px;
     }
     .add-drama-form button {
-      padding: 8px 14px;
-      border-radius: 10px;
+      padding: 9px 16px;
+      border-radius: 11px;
       border: none;
       background: var(--teal);
       color: #fff;
@@ -377,32 +389,108 @@
       cursor: pointer;
     }
 
-    /* Admin Modal */
+    /* News Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      animation: fadeIn 0.25s ease;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: var(--card);
+      border-radius: 20px;
+      max-width: 520px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+      animation: fadeUp 0.3s ease;
+    }
+    .modal h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      line-height: 1.35;
+    }
+    .modal .meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+    .modal .body {
+      font-size: 15px;
+      line-height: 1.55;
+      color: var(--text);
+      margin-bottom: 20px;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    .modal-actions a, .modal-actions button {
+      padding: 10px 16px;
+      border-radius: 11px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+    }
+    .btn-secondary {
+      background: var(--card-sub);
+      color: var(--text);
+      border: 1px solid var(--border) !important;
+    }
+    .btn-primary-modal {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* Admin */
     #adminPanel {
       display: none;
-      max-width: 500px;
+      max-width: 520px;
       margin: 0 auto 24px;
       background: var(--card);
       border: 2px solid var(--accent);
       border-radius: 20px;
-      padding: 20px;
+      padding: 22px;
     }
-    #adminPanel h2 { font-size: 18px; margin-bottom: 12px; }
-    #adminPanel label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 10px 0 4px; }
-    #adminPanel input[type="text"], #adminPanel input[type="password"], #adminPanel input[type="file"] {
+    #adminPanel h2 { font-size: 18px; margin-bottom: 14px; }
+    #adminPanel label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      margin: 12px 0 5px;
+    }
+    #adminPanel input[type="text"],
+    #adminPanel input[type="password"],
+    #adminPanel input[type="file"],
+    #adminPanel textarea {
       width: 100%;
-      padding: 10px;
-      border-radius: 10px;
+      padding: 11px;
+      border-radius: 11px;
       border: 1px solid var(--border);
       background: var(--card-sub);
       color: var(--text);
+      font-size: 14px;
     }
+    #adminPanel textarea { resize: vertical; min-height: 80px; }
     .btn-primary {
       width: 100%;
-      margin-top: 14px;
-      padding: 12px;
+      margin-top: 16px;
+      padding: 13px;
       border: none;
-      border-radius: 12px;
+      border-radius: 13px;
       background: var(--accent);
       color: #fff;
       font-size: 15px;
@@ -415,8 +503,8 @@
       justify-content: space-between;
       align-items: center;
       background: var(--card-sub);
-      padding: 8px 12px;
-      border-radius: 10px;
+      padding: 9px 13px;
+      border-radius: 11px;
       font-size: 13px;
       gap: 8px;
     }
@@ -425,30 +513,40 @@
       text-align: center;
       font-size: 12px;
       color: var(--muted);
-      margin-top: 24px;
+      margin-top: 28px;
+      padding-bottom: 10px;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <!-- Hidden Admin Uploader (#admin) -->
+    <!-- Admin Panel -->
     <div id="adminPanel">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <h2>Remote Surprise Photo Drop</h2>
+        <h2>Photo Admin</h2>
         <button class="icon-btn" onclick="closeAdmin()">Close</button>
       </div>
-      <label>GitHub Secret Gist ID</label>
-      <input type="text" id="admGistId" placeholder="e.g. a1b2c3d4e5f6..." />
+
       <label>GitHub Personal Access Token (gist scope)</label>
       <input type="password" id="admToken" placeholder="ghp_..." />
-      <label>Family Passphrase (Must match iPad)</label>
+
+      <label>Family Passphrase</label>
       <input type="text" id="admPass" placeholder="e.g. purplehearts2026" />
+
+      <label>Gist IDs (one per line)</label>
+      <textarea id="admGistIds" placeholder="Paste one Gist ID per line"></textarea>
+
+      <label>Upload photos into which Gist ID?</label>
+      <input type="text" id="admUploadTarget" placeholder="Target Gist ID" />
+
       <label>Select Photo(s)</label>
       <input type="file" id="admFile" accept="image/*" multiple />
-      <label>Caption (Optional — applied to selected batch)</label>
-      <input type="text" id="admCaption" placeholder="e.g. Cyrus after playschool!" />
-      <button class="btn-primary" id="admUploadBtn" onclick="uploadEncryptedPhoto()">Encrypt &amp; Add Photo(s)</button>
-      <p id="admStatus" style="font-size:13px;margin-top:8px;color:var(--accent);"></p>
+
+      <label>Caption (optional)</label>
+      <input type="text" id="admCaption" placeholder="e.g. Cyrus after playschool" />
+
+      <button class="btn-primary" id="admUploadBtn" onclick="uploadEncryptedPhoto()">Encrypt & Add Photo(s)</button>
+      <p id="admStatus" style="font-size:13px;margin-top:10px;color:var(--accent);"></p>
       <div class="admin-photo-list" id="admExistingList"></div>
     </div>
 
@@ -456,20 +554,19 @@
     <header>
       <div class="greeting-wrap">
         <h1 id="greetingText">Good Morning.</h1>
-        <div class="date-line" id="dateText">LOADING DATE...</div>
+        <div class="date-line" id="dateText">LOADING...</div>
       </div>
       <div class="header-right">
         <div class="live-clock" id="clockText">00:00</div>
-        <button class="icon-btn" onclick="toggleTheme()" title="Toggle Theme">Theme</button>
-        <button class="icon-btn" onclick="loadAllData(true)" title="Refresh">Refresh</button>
+        <button class="icon-btn" onclick="toggleTheme()">Theme</button>
+        <button class="icon-btn" onclick="loadAllData()">Refresh</button>
       </div>
     </header>
 
-    <!-- Main 2-Column Bento -->
     <div class="bento">
       <!-- Left Column -->
       <div class="col">
-        <!-- Weather Card -->
+        <!-- Weather -->
         <div class="card">
           <div class="card-header">
             <div class="card-title"><span class="dot" style="background:var(--warm);"></span> Local Weather</div>
@@ -480,57 +577,68 @@
               <div class="temp-big" id="wTemp">--°</div>
               <div class="weather-meta">
                 <h2 id="wCity">Petaling Jaya</h2>
-                <p id="wDesc">Loading forecast...</p>
+                <p id="wDesc">Loading...</p>
               </div>
             </div>
             <div id="wMainIcon" style="font-size:44px;">⛅</div>
           </div>
           <div class="pills">
             <div class="pill" id="wRainPill">Rain: --%</div>
-            <div class="pill" id="wAqiPill">Air Quality: --</div>
+            <div class="pill" id="wAqiPill">Air: --</div>
             <div class="pill" id="wSunPill">Sunset: --:--</div>
           </div>
           <div class="timeline" id="wTimeline"></div>
           <div class="forecast-3d" id="wForecast3d"></div>
         </div>
 
-        <!-- Private Family Photo Carousel -->
+        <!-- Family Photos -->
         <div class="card">
           <div class="card-header">
             <div class="card-title"><span class="dot" style="background:var(--accent);"></span> Family Moments</div>
             <button id="lockResetBtn" class="icon-btn" style="display:none;padding:4px 10px;font-size:11px;" onclick="forgetPassphrase()">Lock</button>
           </div>
-          <div class="photo-box" id="photoContainer">
-            <!-- Populated dynamically -->
+          <div class="photo-box" id="photoContainer"></div>
+        </div>
+
+        <!-- Malaysian News -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="dot" style="background:var(--rose);"></span> Malaysia News</div>
+          </div>
+          <div id="malaysiaNewsList">
+            <p style="font-size:13px;color:var(--muted);">Loading news...</p>
           </div>
         </div>
       </div>
 
       <!-- Right Column -->
       <div class="col">
-        <!-- BTS Corner -->
+        <!-- BTS -->
         <div class="card">
           <div class="card-header">
             <div class="card-title"><span class="dot" style="background:var(--accent);"></span> BTS Daily Corner</div>
-            <span style="font-size:11px;font-weight:700;color:var(--accent);">ARMY FEED</span>
+            <span style="font-size:11px;font-weight:700;color:var(--accent);">ARMY</span>
           </div>
           <div class="bts-quote" id="btsQuoteBox"></div>
-          <div id="btsNewsList"><p style="font-size:13px;color:var(--muted);">Loading latest BTS updates...</p></div>
+          <div id="btsNewsList">
+            <p style="font-size:13px;color:var(--muted);">Loading BTS updates...</p>
+          </div>
         </div>
 
-        <!-- K-Drama & C-Drama Radar -->
+        <!-- Drama -->
         <div class="card">
           <div class="card-header">
-            <div class="card-title"><span class="dot" style="background:var(--teal);"></span> K-Drama &amp; C-Drama</div>
+            <div class="card-title"><span class="dot" style="background:var(--teal);"></span> K-Drama & C-Drama</div>
             <div class="tabs">
               <button class="tab-btn active" id="tabKdrama" onclick="switchDramaTab('kdrama')">K-Drama</button>
               <button class="tab-btn" id="tabCdrama" onclick="switchDramaTab('cdrama')">C-Drama</button>
             </div>
           </div>
-          <div id="dramaNewsList"><p style="font-size:13px;color:var(--muted);">Loading drama headlines...</p></div>
+          <div id="dramaNewsList">
+            <p style="font-size:13px;color:var(--muted);">Loading...</p>
+          </div>
 
-          <!-- Personal Episode Tracker (Saved locally on her iPad) -->
-          <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+          <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);">
             <div class="card-title" style="margin-bottom:8px;">My Episode Tracker</div>
             <div id="dramaWatchlist"></div>
             <div class="add-drama-form">
@@ -539,19 +647,40 @@
             </div>
           </div>
         </div>
+
+        <!-- Singapore / Regional -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="dot" style="background:var(--warm);"></span> Singapore & Regional</div>
+          </div>
+          <div id="sgNewsList">
+            <p style="font-size:13px;color:var(--muted);">Loading...</p>
+          </div>
+        </div>
       </div>
     </div>
 
     <footer id="footerStatus">Ready</footer>
   </div>
 
+  <!-- News Modal -->
+  <div class="modal-overlay" id="newsModal" onclick="closeModal(event)">
+    <div class="modal">
+      <h3 id="modalTitle"></h3>
+      <div class="meta" id="modalMeta"></div>
+      <div class="body" id="modalBody"></div>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal()">Close</button>
+        <a id="modalLink" class="btn-primary-modal" target="_blank" rel="noopener">Read full article</a>
+      </div>
+    </div>
+  </div>
+
   <script>
     // =========================================================
-    // CONFIGURATION: Paste your GitHub Gist ID below
+    // CONFIG
     // =========================================================
-    var DEFAULT_GIST_ID = "1ed61d570382149272433f66720a12fd";
-
-    // Default fallback coordinates: Petaling Jaya, Malaysia
+    var DEFAULT_GIST_IDS = ["3d92b546c1b9ea550f170ad4ccec006d"];
     var FALLBACK_LAT = 3.1073;
     var FALLBACK_LON = 101.6067;
     var FALLBACK_CITY = "Petaling Jaya";
@@ -578,7 +707,7 @@
     var dramaFeedsCache = { kdrama: [], cdrama: [] };
 
     // =========================================================
-    // 1. CLOCK, THEME & DAILY BTS QUOTE
+    // CLOCK & THEME
     // =========================================================
     function updateClockAndGreeting() {
       var now = new Date();
@@ -619,7 +748,7 @@
     }
 
     // =========================================================
-    // 2. GEOLOCATION + OPEN-METEO WEATHER & AIR QUALITY
+    // WEATHER
     // =========================================================
     function getWeatherEmoji(code) {
       if (code === 0) return "☀️";
@@ -629,7 +758,6 @@
       if (code <= 82) return "🌦️";
       return "⛈️";
     }
-
     function getWeatherLabel(code) {
       if (code === 0) return "Clear sky";
       if (code <= 3) return "Partly cloudy";
@@ -646,7 +774,6 @@
         "&hourly=temperature_2m,precipitation_probability,weather_code" +
         "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunset" +
         "&timezone=auto&forecast_days=4";
-
       var aqiUrl = "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=" + lat +
         "&longitude=" + lon + "&current=pm2_5,us_aqi";
 
@@ -722,7 +849,6 @@
 
     function initWeather() {
       fetchWeatherForCoords(FALLBACK_LAT, FALLBACK_LON, FALLBACK_CITY);
-
       if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition(function(pos) {
           var lat = pos.coords.latitude.toFixed(4);
@@ -742,24 +868,59 @@
     }
 
     // =========================================================
-    // 3. BTS & K-DRAMA / C-DRAMA PUBLIC RSS FEEDS
+    // NEWS HELPERS + MODAL
     // =========================================================
-    function fetchRssViaJson(rssUrl) {
+    function fetchRss(rssUrl) {
       var api = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(rssUrl);
       return fetch(api).then(function(r) { return r.json(); });
     }
 
+    function openNewsModal(title, source, description, link) {
+      document.getElementById("modalTitle").textContent = title;
+      document.getElementById("modalMeta").textContent = source;
+      document.getElementById("modalBody").textContent = description || "No summary available.";
+      document.getElementById("modalLink").href = link;
+      document.getElementById("newsModal").classList.add("show");
+    }
+
+    function closeModal(e) {
+      if (!e || e.target.id === "newsModal" || e.target.classList.contains("btn-secondary")) {
+        document.getElementById("newsModal").classList.remove("show");
+      }
+    }
+
+    function renderNewsList(containerId, items, color, sourceLabel) {
+      var html = "";
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        var desc = (item.description || "").replace(/<[^>]*>/g, "").substring(0, 220);
+        html +=
+          '<div class="feed-item" onclick=\'openNewsModal(' +
+            JSON.stringify(item.title) + ',' +
+            JSON.stringify(sourceLabel) + ',' +
+            JSON.stringify(desc) + ',' +
+            JSON.stringify(item.link) +
+          ')\'>' +
+            '<div class="feed-source" style="color:' + color + ';">' + sourceLabel + '</div>' +
+            '<div class="title">' + item.title + '</div>' +
+          '</div>';
+      }
+      document.getElementById(containerId).innerHTML = html || '<p style="font-size:13px;color:var(--muted);">No stories right now.</p>';
+    }
+
+    // =========================================================
+    // BTS + DRAMA FEEDS
+    // =========================================================
     function loadEntertainmentFeeds() {
-      fetchRssViaJson("https://www.soompi.com/feed")
+      fetchRss("https://www.soompi.com/feed")
         .then(function(data) {
           if (!data || !data.items) return;
           var btsItems = data.items.filter(function(item) {
-            var title = (item.title + " " + (item.categories || []).join(" ")).toLowerCase();
-            return /bts|jungkook|jimin|taehyung|suga|jin|rm|j-hope|jhope|bangtan|hybe/.test(title);
+            var t = (item.title + " " + (item.categories || []).join(" ")).toLowerCase();
+            return /bts|jungkook|jimin|taehyung|suga|jin|rm|j-hope|jhope|bangtan|hybe/.test(t);
           }).slice(0, 4);
-
           if (btsItems.length === 0) btsItems = data.items.slice(0, 4);
-          renderFeedList("btsNewsList", btsItems, "var(--accent)", "Soompi");
+          renderNewsList("btsNewsList", btsItems, "var(--accent)", "Soompi");
 
           var kdramaItems = data.items.filter(function(item) {
             var text = (item.title + " " + (item.categories || []).join(" ")).toLowerCase();
@@ -767,32 +928,18 @@
           }).slice(0, 5);
           dramaFeedsCache.kdrama = kdramaItems.length ? kdramaItems : data.items.slice(0, 5);
           if (activeDramaTab === "kdrama") {
-            renderFeedList("dramaNewsList", dramaFeedsCache.kdrama, "var(--teal)", "Soompi");
+            renderNewsList("dramaNewsList", dramaFeedsCache.kdrama, "var(--teal)", "Soompi");
           }
-        })
-        .catch(function() {});
+        }).catch(function() {});
 
-      fetchRssViaJson("https://dramapanda.com/feed")
+      fetchRss("https://dramapanda.com/feed")
         .then(function(data) {
           if (!data || !data.items) return;
           dramaFeedsCache.cdrama = data.items.slice(0, 5);
           if (activeDramaTab === "cdrama") {
-            renderFeedList("dramaNewsList", dramaFeedsCache.cdrama, "var(--warm)", "DramaPanda");
+            renderNewsList("dramaNewsList", dramaFeedsCache.cdrama, "var(--warm)", "DramaPanda");
           }
-        })
-        .catch(function() {});
-    }
-
-    function renderFeedList(containerId, items, color, sourceLabel) {
-      var html = "";
-      for (var i = 0; i < items.length; i++) {
-        html +=
-          '<div class="feed-item">' +
-            '<div class="feed-source" style="color:' + color + ';">' + sourceLabel + '</div>' +
-            '<a href="' + items[i].link + '" target="_blank" rel="noopener">' + items[i].title + '</a>' +
-          '</div>';
-      }
-      document.getElementById(containerId).innerHTML = html;
+        }).catch(function() {});
     }
 
     function switchDramaTab(tab) {
@@ -800,20 +947,49 @@
       document.getElementById("tabKdrama").classList.toggle("active", tab === "kdrama");
       document.getElementById("tabCdrama").classList.toggle("active", tab === "cdrama");
       if (tab === "kdrama") {
-        renderFeedList("dramaNewsList", dramaFeedsCache.kdrama, "var(--teal)", "Soompi");
+        renderNewsList("dramaNewsList", dramaFeedsCache.kdrama, "var(--teal)", "Soompi");
       } else {
-        renderFeedList("dramaNewsList", dramaFeedsCache.cdrama, "var(--warm)", "DramaPanda");
+        renderNewsList("dramaNewsList", dramaFeedsCache.cdrama, "var(--warm)", "DramaPanda");
       }
     }
 
     // =========================================================
-    // 4. LOCAL EPISODE TRACKER (iPad localStorage)
+    // MALAYSIA + SINGAPORE NEWS
+    // =========================================================
+    function loadLocalNews() {
+      // Malay Mail
+      fetchRss("https://www.malaymail.com/feed/rss")
+        .then(function(data) {
+          if (!data || !data.items) return;
+          renderNewsList("malaysiaNewsList", data.items.slice(0, 6), "var(--rose)", "Malay Mail");
+        }).catch(function() {
+          document.getElementById("malaysiaNewsList").innerHTML = '<p style="font-size:13px;color:var(--muted);">Unable to load Malay Mail.</p>';
+        });
+
+      // Mothership.sg – filter out low-value / gossip
+      fetchRss("https://mothership.sg/feed/")
+        .then(function(data) {
+          if (!data || !data.items) return;
+          var filtered = data.items.filter(function(item) {
+            var t = (item.title + " " + (item.categories || []).join(" ")).toLowerCase();
+            // skip common low-value patterns
+            if (/celebrity|dating|relationship drama|influencer|tiktok|scandal|exposed|spotted|dating rumor/.test(t)) return false;
+            if (/looks like|netizens react|this photo|this video/.test(t) && t.length < 60) return false;
+            return true;
+          }).slice(0, 6);
+          renderNewsList("sgNewsList", filtered, "var(--warm)", "Mothership");
+        }).catch(function() {
+          document.getElementById("sgNewsList").innerHTML = '<p style="font-size:13px;color:var(--muted);">Unable to load Mothership.</p>';
+        });
+    }
+
+    // =========================================================
+    // EPISODE TRACKER
     // =========================================================
     function getWatchlist() {
       var raw = localStorage.getItem("mom_drama_watchlist");
       return raw ? JSON.parse(raw) : [{ title: "My Current Drama", ep: 1 }];
     }
-
     function renderWatchlist() {
       var list = getWatchlist();
       var html = "";
@@ -822,8 +998,8 @@
           '<div class="watchlist-row">' +
             '<span style="font-weight:600;font-size:14px;">' + list[i].title + '</span>' +
             '<div class="ep-controls">' +
-              '<button class="ep-btn" onclick="changeEp(' + i + ', -1)">-</button>' +
-              '<span style="font-size:13px;font-weight:700;min-width:46px;text-align:center;">Ep ' + list[i].ep + '</span>' +
+              '<button class="ep-btn" onclick="changeEp(' + i + ', -1)">−</button>' +
+              '<span style="font-size:13px;font-weight:700;min-width:48px;text-align:center;">Ep ' + list[i].ep + '</span>' +
               '<button class="ep-btn" onclick="changeEp(' + i + ', 1)">+</button>' +
               '<button class="ep-btn" style="color:#ef4444;" onclick="removeDrama(' + i + ')">×</button>' +
             '</div>' +
@@ -831,7 +1007,6 @@
       }
       document.getElementById("dramaWatchlist").innerHTML = html;
     }
-
     function addDrama() {
       var input = document.getElementById("newDramaTitle");
       var title = input.value.trim();
@@ -842,14 +1017,12 @@
       input.value = "";
       renderWatchlist();
     }
-
     function changeEp(idx, delta) {
       var list = getWatchlist();
       list[idx].ep = Math.max(1, list[idx].ep + delta);
       localStorage.setItem("mom_drama_watchlist", JSON.stringify(list));
       renderWatchlist();
     }
-
     function removeDrama(idx) {
       var list = getWatchlist();
       list.splice(idx, 1);
@@ -858,22 +1031,16 @@
     }
 
     // =========================================================
-    // 5. AES-GCM CLIENT-SIDE ENCRYPTION & PRIVATE PHOTO CAROUSEL
+    // PHOTO ENCRYPTION + MULTI-GIST
     // =========================================================
     async function deriveKey(passphrase, salt) {
       var enc = new TextEncoder();
-      var keyMaterial = await crypto.subtle.importKey(
-        "raw", enc.encode(passphrase), { name: "PBKDF2" }, false, ["deriveKey"]
-      );
+      var keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), { name: "PBKDF2" }, false, ["deriveKey"]);
       return crypto.subtle.deriveKey(
         { name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" },
-        keyMaterial,
-        { name: "AES-GCM", length: 256 },
-        false,
-        ["encrypt", "decrypt"]
+        keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]
       );
     }
-
     async function encryptString(plainText, passphrase) {
       var salt = crypto.getRandomValues(new Uint8Array(16));
       var iv = crypto.getRandomValues(new Uint8Array(12));
@@ -886,7 +1053,6 @@
         data: btoa(String.fromCharCode.apply(null, new Uint8Array(cipherBuffer)))
       };
     }
-
     async function decryptObject(encObj, passphrase) {
       var salt = Uint8Array.from(atob(encObj.salt), function(c) { return c.charCodeAt(0); });
       var iv = Uint8Array.from(atob(encObj.iv), function(c) { return c.charCodeAt(0); });
@@ -902,30 +1068,26 @@
       localStorage.setItem("mom_family_pass", pass);
       loadFamilyPhotos();
     }
-
     function forgetPassphrase() {
       localStorage.removeItem("mom_family_pass");
       currentPhotos = [];
       if (carouselTimer) clearInterval(carouselTimer);
       renderPhotoLockScreen("");
     }
-
     function renderPhotoLockScreen(errorMsg) {
       document.getElementById("lockResetBtn").style.display = "none";
       document.getElementById("photoContainer").innerHTML =
         '<div class="lock-panel">' +
-          '<div style="font-size:32px;margin-bottom:8px;">🔒</div>' +
-          '<p style="font-size:14px;color:var(--muted);margin-bottom:14px;">Enter family passphrase to view photos</p>' +
+          '<div style="font-size:34px;margin-bottom:10px;">🔒</div>' +
+          '<p style="font-size:14px;color:var(--muted);margin-bottom:16px;">Enter family passphrase to view photos</p>' +
           '<input type="password" id="passInput" placeholder="Passphrase" />' +
           '<button onclick="savePassphrase()">Unlock</button>' +
-          (errorMsg ? '<p style="color:#ef4444;font-size:12px;margin-top:10px;">' + errorMsg + '</p>' : '') +
+          (errorMsg ? '<p style="color:#ef4444;font-size:12px;margin-top:12px;">' + errorMsg + '</p>' : '') +
         '</div>';
     }
 
     function parseGistPhotosFile(gist) {
-      if (!gist || !gist.files) {
-        throw new Error(gist && gist.message ? gist.message : "Unable to read Gist data.");
-      }
+      if (!gist || !gist.files) throw new Error(gist && gist.message ? gist.message : "Unable to read Gist.");
       var targetFile = gist.files["family_photos.json"];
       if (!targetFile) {
         var keys = Object.keys(gist.files);
@@ -944,40 +1106,35 @@
         return;
       }
 
-      var gistId = localStorage.getItem("adm_gist_id") || DEFAULT_GIST_ID;
-      if (!gistId || gistId === "YOUR_GIST_ID_HERE") {
-        renderPhotoLockScreen("Gist ID not configured in index.html yet.");
+      var gistIds = JSON.parse(localStorage.getItem("adm_gist_ids") || "null") || DEFAULT_GIST_IDS;
+      if (!gistIds.length) {
+        renderPhotoLockScreen("No Gist IDs configured.");
         return;
       }
 
       document.getElementById("lockResetBtn").style.display = "inline-block";
 
-      var res;
       try {
-        res = await fetch("https://api.github.com/gists/" + gistId + "?t=" + Date.now());
-      } catch (netErr) {
-        document.getElementById("photoContainer").innerHTML =
-          '<div class="lock-panel"><p style="color:var(--muted);">Offline — waiting for connection to load photos.</p></div>';
-        return;
-      }
+        var allPhotos = [];
+        for (var g = 0; g < gistIds.length; g++) {
+          var res = await fetch("https://api.github.com/gists/" + gistIds[g] + "?t=" + Date.now());
+          var gist = await res.json();
+          var parsed = parseGistPhotosFile(gist);
+          for (var i = 0; i < parsed.photos.length; i++) {
+            try {
+              var jsonStr = await decryptObject(parsed.photos[i], pass);
+              allPhotos.push(JSON.parse(jsonStr));
+            } catch (e) {}
+          }
+        }
 
-      try {
-        var gist = await res.json();
-        var parsed = parseGistPhotosFile(gist);
-
-        if (parsed.photos.length === 0) {
+        if (allPhotos.length === 0) {
           document.getElementById("photoContainer").innerHTML =
-            '<div class="lock-panel"><p style="color:var(--muted);">No photos uploaded yet.</p></div>';
+            '<div class="lock-panel"><p style="color:var(--muted);">No photos found.</p></div>';
           return;
         }
 
-        var decryptedList = [];
-        for (var i = 0; i < parsed.photos.length; i++) {
-          var jsonStr = await decryptObject(parsed.photos[i], pass);
-          decryptedList.push(JSON.parse(jsonStr));
-        }
-
-        currentPhotos = decryptedList.reverse();
+        currentPhotos = allPhotos.reverse();
         currentPhotoIdx = 0;
         renderCurrentPhoto();
 
@@ -994,18 +1151,16 @@
     function renderCurrentPhoto() {
       if (!currentPhotos.length) return;
       var p = currentPhotos[currentPhotoIdx];
-      var navButtons = currentPhotos.length > 1
+      var nav = currentPhotos.length > 1
         ? '<button class="photo-nav prev" onclick="stepPhoto(-1)">‹</button><button class="photo-nav next" onclick="stepPhoto(1)">›</button>'
         : '';
       document.getElementById("photoContainer").innerHTML =
-        '<img src="' + p.img + '" alt="Family photo" />' +
-        navButtons +
+        '<img src="' + p.img + '" alt="Family photo" />' + nav +
         '<div class="photo-caption">' +
           (p.caption ? p.caption : '') +
-          '<small>' + p.date + ' (' + (currentPhotoIdx + 1) + ' of ' + currentPhotos.length + ')</small>' +
+          '<small>' + p.date + ' · ' + (currentPhotoIdx + 1) + ' of ' + currentPhotos.length + '</small>' +
         '</div>';
     }
-
     function stepPhoto(delta) {
       if (!currentPhotos.length) return;
       currentPhotoIdx = (currentPhotoIdx + delta + currentPhotos.length) % currentPhotos.length;
@@ -1013,27 +1168,26 @@
     }
 
     // =========================================================
-    // 6. REMOTE PHONE ADMIN UPLOADER (#admin)
+    // ADMIN
     // =========================================================
     function checkAdminHash() {
-  if (window.location.hash === "#admin") {
-    // Simple master password protection
-    var masterPass = "!@#123QWEasd";   // ← change this to whatever you want
-    var saved = localStorage.getItem("adm_unlocked");
+      if (window.location.hash === "#admin") {
+        var masterPass = "your-secret-password-here"; // ← CHANGE THIS
+        var saved = localStorage.getItem("adm_unlocked");
 
-    if (saved === "yes" || prompt("Enter admin password:") === masterPass) {
-      localStorage.setItem("adm_unlocked", "yes");
-      document.getElementById("adminPanel").style.display = "block";
-      document.getElementById("admGistId").value = localStorage.getItem("adm_gist_id") || (DEFAULT_GIST_ID !== "YOUR_GIST_ID_HERE" ? DEFAULT_GIST_ID : "");
-      document.getElementById("admToken").value = localStorage.getItem("adm_token") || "";
-      document.getElementById("admPass").value = localStorage.getItem("adm_pass") || "";
-      loadAdminPhotoList();
-    } else {
-      alert("Wrong password");
-      history.replaceState(null, "", window.location.pathname);
+        if (saved === "yes" || prompt("Enter admin password:") === masterPass) {
+          localStorage.setItem("adm_unlocked", "yes");
+          document.getElementById("adminPanel").style.display = "block";
+          document.getElementById("admToken").value = localStorage.getItem("adm_token") || "";
+          document.getElementById("admPass").value = localStorage.getItem("adm_pass") || "";
+          var ids = JSON.parse(localStorage.getItem("adm_gist_ids") || "null") || DEFAULT_GIST_IDS;
+          document.getElementById("admGistIds").value = ids.join("\n");
+        } else {
+          alert("Wrong password");
+          history.replaceState(null, "", window.location.pathname);
+        }
+      }
     }
-  }
-}
 
     function closeAdmin() {
       document.getElementById("adminPanel").style.display = "none";
@@ -1046,14 +1200,14 @@
         reader.onload = function(e) {
           var img = new Image();
           img.onload = function() {
-            var maxW = 700;
+            var maxW = 720;
             var scale = img.width > maxW ? maxW / img.width : 1;
             var canvas = document.createElement("canvas");
             canvas.width = Math.round(img.width * scale);
             canvas.height = Math.round(img.height * scale);
             var ctx = canvas.getContext("2d");
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            resolve(canvas.toDataURL("image/jpeg", 0.60));
+            resolve(canvas.toDataURL("image/jpeg", 0.62));
           };
           img.src = e.target.result;
         };
@@ -1062,32 +1216,30 @@
     }
 
     async function uploadEncryptedPhoto() {
-      var gistId = document.getElementById("admGistId").value.trim();
       var token = document.getElementById("admToken").value.trim();
       var pass = document.getElementById("admPass").value.trim();
+      var targetGist = document.getElementById("admUploadTarget").value.trim();
       var fileInput = document.getElementById("admFile");
       var caption = document.getElementById("admCaption").value.trim();
       var statusEl = document.getElementById("admStatus");
       var uploadBtn = document.getElementById("admUploadBtn");
 
-      if (!gistId || !token || !pass || !fileInput.files || !fileInput.files.length) {
-        statusEl.textContent = "Please fill in Gist ID, Token, Passphrase, and select at least one photo.";
-        return;
-      }
-
-      localStorage.setItem("adm_gist_id", gistId);
+      var gistIdsText = document.getElementById("admGistIds").value.trim();
+      var gistIds = gistIdsText.split("\n").map(function(s){ return s.trim(); }).filter(Boolean);
+      localStorage.setItem("adm_gist_ids", JSON.stringify(gistIds));
       localStorage.setItem("adm_token", token);
       localStorage.setItem("adm_pass", pass);
 
-      uploadBtn.disabled = true;
+      if (!token || !pass || !targetGist || !fileInput.files.length) {
+        statusEl.textContent = "Please fill Token, Passphrase, Target Gist ID, and select photos.";
+        return;
+      }
 
+      uploadBtn.disabled = true;
       try {
-        statusEl.textContent = "Fetching existing photos from Gist...";
-        var getRes = await fetch("https://api.github.com/gists/" + gistId + "?t=" + Date.now(), {
-          headers: {
-            "Authorization": "Bearer " + token,
-            "Accept": "application/vnd.github+json"
-          }
+        statusEl.textContent = "Fetching existing photos...";
+        var getRes = await fetch("https://api.github.com/gists/" + targetGist + "?t=" + Date.now(), {
+          headers: { "Authorization": "Bearer " + token, "Accept": "application/vnd.github+json" }
         });
         var gist = await getRes.json();
         var existing = parseGistPhotosFile(gist);
@@ -1096,19 +1248,15 @@
         var dateStr = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
         for (var i = 0; i < files.length; i++) {
-          statusEl.textContent = "Compressing & encrypting photo " + (i + 1) + " of " + files.length + "...";
+          statusEl.textContent = "Encrypting photo " + (i + 1) + " of " + files.length + "...";
           var dataUrl = await compressImageFile(files[i]);
-          var payloadObj = {
-            img: dataUrl,
-            caption: caption,
-            date: dateStr
-          };
+          var payloadObj = { img: dataUrl, caption: caption, date: dateStr };
           var encryptedItem = await encryptString(JSON.stringify(payloadObj), pass);
           existing.photos.push(encryptedItem);
         }
 
-        statusEl.textContent = "Saving " + existing.photos.length + " total photos to Gist...";
-        var patchRes = await fetch("https://api.github.com/gists/" + gistId, {
+        statusEl.textContent = "Saving...";
+        var patchRes = await fetch("https://api.github.com/gists/" + targetGist, {
           method: "PATCH",
           headers: {
             "Authorization": "Bearer " + token,
@@ -1116,106 +1264,22 @@
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            files: {
-              "family_photos.json": { content: JSON.stringify(existing) }
-            }
+            files: { "family_photos.json": { content: JSON.stringify(existing) } }
           })
         });
-        var patchData = await patchRes.json();
         if (!patchRes.ok) {
-          throw new Error(patchData && patchData.message ? patchData.message : "Failed to save Gist.");
+          var errData = await patchRes.json();
+          throw new Error(errData.message || "Failed to save");
         }
 
-        statusEl.textContent = "Added " + files.length + " photo(s)! Total saved: " + existing.photos.length + ".";
+        statusEl.textContent = "Added " + files.length + " photo(s)!";
         fileInput.value = "";
         document.getElementById("admCaption").value = "";
-        await loadAdminPhotoList();
         await loadFamilyPhotos();
       } catch (err) {
         statusEl.textContent = "Upload failed: " + err.message;
       } finally {
         uploadBtn.disabled = false;
-      }
-    }
-
-    async function loadAdminPhotoList() {
-      var gistId = document.getElementById("admGistId").value.trim();
-      var token = document.getElementById("admToken").value.trim();
-      var pass = document.getElementById("admPass").value.trim();
-      var listEl = document.getElementById("admExistingList");
-      if (!gistId || !token || !pass) return;
-
-      try {
-        var res = await fetch("https://api.github.com/gists/" + gistId + "?t=" + Date.now(), {
-          headers: {
-            "Authorization": "Bearer " + token,
-            "Accept": "application/vnd.github+json"
-          }
-        });
-        var gist = await res.json();
-        var parsed = parseGistPhotosFile(gist);
-        listEl.innerHTML = "";
-
-        if (parsed.photos.length === 0) {
-          listEl.innerHTML = '<div class="admin-photo-item"><span>No photos saved yet.</span></div>';
-          return;
-        }
-
-        for (var i = parsed.photos.length - 1; i >= 0; i--) {
-          var item = JSON.parse(await decryptObject(parsed.photos[i], pass));
-          var row = document.createElement("div");
-          row.className = "admin-photo-item";
-          var labelText = "#" + (i + 1) + " · " + item.date + (item.caption ? " — " + item.caption : "");
-          row.innerHTML =
-            '<span>' + labelText + '</span>' +
-            '<button class="ep-btn" style="color:#ef4444;" onclick="deletePhotoAt(' + i + ')">×</button>';
-          listEl.appendChild(row);
-        }
-      } catch (e) {
-        listEl.innerHTML = '<div class="admin-photo-item"><span style="color:#ef4444;">Could not list photos: ' + e.message + '</span></div>';
-      }
-    }
-
-    async function deletePhotoAt(index) {
-      var gistId = document.getElementById("admGistId").value.trim();
-      var token = document.getElementById("admToken").value.trim();
-      var statusEl = document.getElementById("admStatus");
-
-      try {
-        statusEl.textContent = "Deleting photo...";
-        var res = await fetch("https://api.github.com/gists/" + gistId + "?t=" + Date.now(), {
-          headers: {
-            "Authorization": "Bearer " + token,
-            "Accept": "application/vnd.github+json"
-          }
-        });
-        var gist = await res.json();
-        var parsed = parseGistPhotosFile(gist);
-        parsed.photos.splice(index, 1);
-
-        var patchRes = await fetch("https://api.github.com/gists/" + gistId, {
-          method: "PATCH",
-          headers: {
-            "Authorization": "Bearer " + token,
-            "Accept": "application/vnd.github+json",
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            files: {
-              "family_photos.json": { content: JSON.stringify(parsed) }
-            }
-          })
-        });
-        var patchData = await patchRes.json();
-        if (!patchRes.ok) {
-          throw new Error(patchData && patchData.message ? patchData.message : "Failed to delete photo.");
-        }
-
-        statusEl.textContent = "Photo deleted. Remaining: " + parsed.photos.length + ".";
-        await loadAdminPhotoList();
-        await loadFamilyPhotos();
-      } catch (err) {
-        statusEl.textContent = "Delete failed: " + err.message;
       }
     }
 
@@ -1227,6 +1291,7 @@
       renderDailyBtsQuote();
       initWeather();
       loadEntertainmentFeeds();
+      loadLocalNews();
       renderWatchlist();
       loadFamilyPhotos();
       document.getElementById("footerStatus").textContent =
