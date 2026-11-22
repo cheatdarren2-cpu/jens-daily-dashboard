@@ -483,6 +483,7 @@
       letter-spacing: 0.2px;
     }
     .photo-caption small { display: block; opacity: 0.72; font-size: 10.5px; margin-top: 3px; letter-spacing: 0.6px; }
+    #photoCount { margin-left: auto; white-space: nowrap; }
     .photo-nav {
       position: absolute;
       top: 50%;
@@ -501,6 +502,51 @@
     .photo-nav:hover { background: rgba(20, 18, 16, 0.58); transform: translateY(-50%) scale(1.04); }
     .photo-nav.prev { left: 12px; }
     .photo-nav.next { right: 12px; }
+
+    /* Thumbnail filmstrip: scroll through the archive, tap to jump */
+    .photo-strip {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      padding: 1px 1px 6px;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      scroll-behavior: smooth;
+      scrollbar-width: thin;
+      scrollbar-color: color-mix(in srgb, var(--accent) 34%, transparent) transparent;
+    }
+    .photo-strip[hidden] { display: none; }
+    .photo-strip::-webkit-scrollbar { height: 5px; }
+    .photo-strip::-webkit-scrollbar-track { background: transparent; }
+    .photo-strip::-webkit-scrollbar-thumb {
+      background: color-mix(in srgb, var(--accent) 32%, transparent);
+      border-radius: 999px;
+    }
+    .photo-thumb {
+      position: relative;
+      flex: 0 0 auto;
+      width: 48px; height: 48px;
+      padding: 0;
+      border-radius: 10px;
+      border: 2px solid transparent;
+      background: var(--surface-2);
+      overflow: hidden;
+      cursor: pointer;
+      opacity: 0.62;
+      transition: opacity 0.2s, border-color 0.2s, transform 0.2s;
+    }
+    .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .photo-thumb:hover { opacity: 1; transform: translateY(-1px); }
+    .photo-thumb.active { opacity: 1; border-color: var(--accent); }
+    .photo-thumb.is-new::after {
+      content: "";
+      position: absolute;
+      top: 4px; right: 4px;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 2px rgba(20, 18, 16, 0.35);
+    }
 
     .lock-panel { text-align: center; padding: 44px 20px; width: 100%; }
     .lock-panel .lock-ico { font-size: 26px; margin-bottom: 12px; opacity: 0.75; }
@@ -1103,10 +1149,13 @@
         gap: 10px;
       }
       .col { display: contents; }
-      .card-weather { grid-column: 1 / span 5; grid-row: 1; }
-      .card-photos  { grid-column: 1 / span 5; grid-row: 2; }
+      .card-weather { grid-column: 1 / span 6; grid-row: 1; }
+      .card-photos  {
+        grid-column: 1 / span 6; grid-row: 2;
+        display: flex; flex-direction: column;
+      }
       .card-bts {
-        grid-column: 6 / span 7; grid-row: 1 / span 2;
+        grid-column: 7 / span 6; grid-row: 1 / span 2;
         align-self: stretch; display: flex; flex-direction: column;
       }
       .card-bts .gallery-frame { flex: none; height: 152px; min-height: 0; }
@@ -1132,8 +1181,17 @@
       .t-slot .t-tmp { font-size: 10px; }
       .t-slot .t-pop { font-size: 8.5px; }
       .forecast-3d { display: none; }
-      .photo-box { min-height: 0; height: 150px; }
-      .photo-box img { height: 150px; max-height: 150px; }
+      .photo-box { flex: 1 1 auto; min-height: 150px; height: auto; }
+      .photo-box img {
+        position: absolute;
+        inset: 0;
+        height: 100%;
+        width: 100%;
+        max-height: none;
+        object-fit: cover;
+      }
+      .photo-strip { flex: none; gap: 6px; margin-top: 7px; padding-bottom: 4px; }
+      .photo-thumb { width: 38px; height: 38px; border-radius: 8px; }
       .photo-caption { padding: 22px 10px 8px; font-size: 10.5px; }
       .photo-caption small { font-size: 8.5px; }
       .photo-nav { width: 24px; height: 24px; font-size: 13px; }
@@ -1275,9 +1333,11 @@
         <section class="card card-photos" style="--i:1">
           <div class="card-header">
             <div class="card-title"><span class="dot dot-accent"></span>Family Moments</div>
+            <span class="badge-soft" id="photoCount">—</span>
             <button id="lockResetBtn" class="icon-btn" style="display:none;padding:4px 10px;font-size:10px;" onclick="forgetPassphrase()">Lock</button>
           </div>
           <div class="photo-box" id="photoContainer"></div>
+          <div class="photo-strip" id="photoStrip" hidden></div>
         </section>
 
         <!-- BTS -->
@@ -1471,6 +1531,8 @@
     var currentPhotos = [];
     var currentPhotoIdx = 0;
     var carouselTimer = null;
+    var PHOTO_SEEN_KEY = "mom_photos_seen_v1";
+    var PHOTO_LAST_KEY = "mom_photos_last_v1";
     var activeDramaTab = "kdrama";
     var dramaFeedsCache = { kdrama: [], cdrama: [] };
 
@@ -2590,7 +2652,98 @@
       localStorage.removeItem("mom_family_pass");
       currentPhotos = [];
       if (carouselTimer) clearInterval(carouselTimer);
+      $("photoStrip").hidden = true;
+      $("photoStrip").innerHTML = "";
+      $("photoCount").textContent = "—";
       renderPhotoLockScreen("");
+    }
+
+    // Photos are stored oldest-first in the Gist, so a reload used to restart the
+    // slideshow on photo 1 every time. Fingerprints let us track which photos have
+    // already been shown and resume from there, even as the archive grows.
+    function photoFingerprint(p) {
+      var img = p.img || "";
+      return (p.date || "") + "|" + (p.caption || "") + "|" + img.length + "|" + img.slice(-24);
+    }
+    function getSeenPhotos() {
+      try { return new Set(JSON.parse(localStorage.getItem(PHOTO_SEEN_KEY) || "[]")); }
+      catch (e) { return new Set(); }
+    }
+    function saveSeenPhotos(seen) {
+      try { localStorage.setItem(PHOTO_SEEN_KEY, JSON.stringify(Array.from(seen).slice(-600))); }
+      catch (e) {}
+    }
+    function unseenPhotoCount() {
+      var seen = getSeenPhotos(), n = 0;
+      for (var i = 0; i < currentPhotos.length; i++) {
+        if (!seen.has(photoFingerprint(currentPhotos[i]))) n++;
+      }
+      return n;
+    }
+    function renderPhotoStrip() {
+      var strip = $("photoStrip");
+      if (!strip) return;
+      if (currentPhotos.length < 2) {
+        strip.hidden = true;
+        strip.innerHTML = "";
+        return;
+      }
+      var seen = getSeenPhotos();
+      var html = "";
+      for (var i = 0; i < currentPhotos.length; i++) {
+        var p = currentPhotos[i];
+        var isNew = !seen.has(photoFingerprint(p));
+        html += '<button type="button" class="photo-thumb' +
+          (i === currentPhotoIdx ? " active" : "") + (isNew ? " is-new" : "") +
+          '" data-i="' + i + '" aria-label="Photo ' + (i + 1) + '" title="' +
+          esc((p.caption ? p.caption + " · " : "") + (p.date || "")) + '">' +
+          '<img src="' + p.img + '" alt="" loading="lazy" decoding="async" />' +
+          "</button>";
+      }
+      strip.innerHTML = html;
+      strip.hidden = false;
+      scrollStripToActive();
+    }
+    function updatePhotoStripActive() {
+      var strip = $("photoStrip");
+      if (!strip || strip.hidden) return;
+      var kids = strip.children;
+      for (var i = 0; i < kids.length; i++) {
+        kids[i].classList.toggle("active", i === currentPhotoIdx);
+        if (i === currentPhotoIdx) kids[i].classList.remove("is-new");
+      }
+      scrollStripToActive();
+    }
+    function scrollStripToActive() {
+      var strip = $("photoStrip");
+      if (!strip || strip.hidden) return;
+      var active = strip.children[currentPhotoIdx];
+      if (!active) return;
+      var target = active.offsetLeft - (strip.clientWidth - active.offsetWidth) / 2;
+      strip.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
+    }
+    // Show the newest photo the user has not seen yet. Once everything has been
+    // viewed, continue after the last photo shown rather than restarting at photo 1.
+    function initialPhotoIndex() {
+      var seen = getSeenPhotos();
+      for (var i = 0; i < currentPhotos.length; i++) {
+        if (!seen.has(photoFingerprint(currentPhotos[i]))) return i;
+      }
+      var last = parseInt(localStorage.getItem(PHOTO_LAST_KEY) || "-1", 10);
+      return last >= 0 && last < currentPhotos.length ? (last + 1) % currentPhotos.length : 0;
+    }
+    function selectPhoto(idx) {
+      if (!currentPhotos.length) return;
+      currentPhotoIdx = (idx + currentPhotos.length) % currentPhotos.length;
+      renderCurrentPhoto();
+      startCarouselTimer();
+    }
+    function startCarouselTimer() {
+      if (carouselTimer) clearInterval(carouselTimer);
+      carouselTimer = null;
+      if (currentPhotos.length > 1) {
+        carouselTimer = setInterval(function () { stepPhoto(1); }, 12000);
+      }
     }
     function renderPhotoLockScreen(errorMsg) {
       $("lockResetBtn").style.display = "none";
@@ -2649,19 +2802,20 @@
         }
 
         if (allPhotos.length === 0) {
+          $("photoStrip").hidden = true;
+          $("photoStrip").innerHTML = "";
+          $("photoCount").textContent = "0 photos";
           $("photoContainer").innerHTML =
             '<div class="lock-panel"><p class="lock-hint">No photos found yet.</p></div>';
           return;
         }
 
         currentPhotos = allPhotos.reverse();
-        currentPhotoIdx = 0;
-        renderCurrentPhoto();
 
-        if (carouselTimer) clearInterval(carouselTimer);
-        if (currentPhotos.length > 1) {
-          carouselTimer = setInterval(function() { stepPhoto(1); }, 12000);
-        }
+        currentPhotoIdx = initialPhotoIndex();
+        renderPhotoStrip();
+        renderCurrentPhoto();
+        startCarouselTimer();
       } catch (e) {
         localStorage.removeItem("mom_family_pass");
         renderPhotoLockScreen("Incorrect passphrase or unable to decrypt.");
@@ -2674,18 +2828,32 @@
       var nav = currentPhotos.length > 1
         ? '<button class="photo-nav prev" onclick="stepPhoto(-1)" aria-label="Previous photo">‹</button><button class="photo-nav next" onclick="stepPhoto(1)" aria-label="Next photo">›</button>'
         : "";
+      var seen = getSeenPhotos();
+      seen.add(photoFingerprint(p));
+      saveSeenPhotos(seen);
+      localStorage.setItem(PHOTO_LAST_KEY, String(currentPhotoIdx));
+
+      var unseen = unseenPhotoCount();
+      $("photoCount").textContent = currentPhotos.length + " photos" + (unseen ? " · " + unseen + " new" : "");
       $("photoContainer").innerHTML =
         '<img class="photo-img" src="' + p.img + '" alt="Family photo" onload="this.classList.add(\'is-loaded\')" onerror="this.classList.add(\'is-loaded\')" />' + nav +
         '<div class="photo-caption">' +
           (p.caption ? esc(p.caption) : "") +
           "<small>" + esc(p.date || "") + " · " + (currentPhotoIdx + 1) + " of " + currentPhotos.length + "</small>" +
         "</div>";
+      updatePhotoStripActive();
     }
     function stepPhoto(delta) {
       if (!currentPhotos.length) return;
       currentPhotoIdx = (currentPhotoIdx + delta + currentPhotos.length) % currentPhotos.length;
       renderCurrentPhoto();
     }
+
+    $("photoStrip").addEventListener("click", function (e) {
+      var thumb = e.target.closest(".photo-thumb");
+      if (!thumb) return;
+      selectPhoto(parseInt(thumb.getAttribute("data-i"), 10));
+    });
 
     // =========================================================
     // ADMIN
