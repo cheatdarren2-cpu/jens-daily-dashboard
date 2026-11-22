@@ -1103,12 +1103,16 @@
         gap: 10px;
       }
       .col { display: contents; }
-      .card-weather { grid-column: span 5; }
-      .card-photos  { grid-column: span 3; }
-      .card-bts     { grid-column: span 4; }
-      .card-my      { grid-column: span 4; }
-      .card-sg      { grid-column: span 4; }
-      .card-drama   { grid-column: span 4; }
+      .card-weather { grid-column: 1 / span 5; grid-row: 1; }
+      .card-photos  { grid-column: 1 / span 5; grid-row: 2; }
+      .card-bts {
+        grid-column: 6 / span 7; grid-row: 1 / span 2;
+        align-self: stretch; display: flex; flex-direction: column;
+      }
+      .card-bts .gallery-frame { flex: none; height: 152px; min-height: 0; }
+      .card-my      { grid-column: 1 / span 4; grid-row: 3; }
+      .card-sg      { grid-column: 5 / span 4; grid-row: 3; }
+      .card-drama   { grid-column: 9 / span 4; grid-row: 3; }
       .card { padding: 12px 13px; border-radius: 16px; animation-duration: 0.45s; }
       .card:hover { transform: none; }
       .card-header { margin-bottom: 7px; }
@@ -1149,7 +1153,6 @@
       .feed-sum, .feed-date { display: none; }
       .feed-source { font-size: 8px; letter-spacing: 1px; }
       .feed-item:nth-child(n+5) { display: none; }
-      .bts-quote + .gallery + .sub-heading + .feed .feed-item:nth-child(n+4) { display: none; }
       .tabs { padding: 2px; }
       .tab-btn { font-size: 9px; padding: 3px 8px; }
       .watchlist-wrap { margin-top: 8px; padding-top: 8px; }
@@ -1391,7 +1394,7 @@
 
     var NEWS_KEY = "mom_news_cache_v3";
     var WEATHER_KEY = "mom_weather_cache_v2";
-    var BTS_PICS_KEY = "mom_bts_pics_v1";
+    var BTS_PICS_KEY = "mom_bts_pics_v2";
     var BTS_SEEN_KEY = "mom_bts_seen_v1";
     var THEME_KEY = "mom_theme_manual";
 
@@ -1868,6 +1871,7 @@
     var FEEDS = {
       malaymail: { label: "Malay Mail", url: "https://www.malaymail.com/feed/rss", color: "var(--rose)" },
       soompi: { label: "Soompi", url: "https://www.soompi.com/feed", color: "var(--accent)" },
+      btswire: { label: "Soompi", url: "https://www.soompi.com/tag/bts/feed", color: "var(--accent)", count: 50 },
       mothership: { label: "Mothership", url: "https://mothership.sg/feed/", color: "var(--warm)" },
       dramapanda: { label: "DramaPanda", url: "https://dramapanda.com/feed", color: "var(--warm)" }
     };
@@ -1938,8 +1942,15 @@
     function feedHas(item, re) {
       return re.test(((item.title || "") + " " + ((item.categories || []).join(" "))).toLowerCase());
     }
-    function isBtsItem(it) {
-      return feedHas(it, /\b(bts|bangtan|jungkook|jimin|taehyung|suga|yoongi|namjoon|seokjin|j-hope|jhope|hoseok|hybe|big hit|army)\b/);
+    /* The Soompi BTS tag feed also carries award-show and chart roundups that are
+       only tagged BTS in passing. Keep only stories where BTS or a member is the
+       actual subject of the headline. */
+    function isBtsWireItem(it) {
+      var title = (it.title || "").trim();
+      if (!title) return false;
+      if (/^bts\s*[,&]/i.test(title) || /^bts\s+(and|&)\b/i.test(title)) return false;
+      if (/winners? of|brand reputation|top circle|billboard|sweep top spots|weekly charts?|monthly and weekly|announces? nominees|masterlist|goosebumps|dance style|visuals destined|k-pop tracks|k-pop dancers/i.test(title)) return false;
+      return /^(?:(?:breaking|update|watch|just in)\s*:\s*)?(bts\b|jungkook\b|jimin\b|taehyung\b|suga\b|yoongi\b|rm\b|namjoon\b|jin\b|seokjin\b|j-hope\b|jhope\b|hoseok\b|hybe\b|big hit\b|v[\u2019'`]s\b)/i.test(title);
     }
     function isDramaItem(it) {
       return feedHas(it, /drama|episode|cast|premiere|ratings|ost|teaser|trailer|netflix|tvn|jtbc|sbs|mbc|kbs|actor|actress/);
@@ -1980,14 +1991,16 @@
 
     function hydrateNews(cached) {
       if (!cached || !cached.lists) return;
-      newsState.lists = Object.assign({ malaysia: [], bts: [], kdrama: [], cdrama: [], sg: [] }, cached.lists);
+      var lists = Object.assign({ malaysia: [], bts: [], kdrama: [], cdrama: [], sg: [] }, cached.lists);
+      lists.bts = (lists.bts || []).filter(isBtsWireItem);
+      newsState.lists = lists;
       newsState.updatedAt = cached.updatedAt || 0;
       renderAllNews();
       setStatus("Showing saved briefing · " + (newsState.updatedAt ? "synced " + timeLabel(new Date(newsState.updatedAt)) : "offline copy"), "ok");
     }
 
     function fetchFeed(def) {
-      var api = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(def.url) + "&count=20";
+      var api = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(def.url) + "&count=" + (def.count || 20);
       return fetch(api, { cache: "no-store" })
         .then(function (r) { return r.json(); })
         .then(function (data) {
@@ -1998,7 +2011,7 @@
         });
     }
 
-    function applyFreshNews(malaymail, soompi, mothership, dramapanda, previous) {
+    function applyFreshNews(malaymail, soompi, mothership, dramapanda, btswire, previous) {
       var lists = {
         malaysia: previous.malaysia || [],
         bts: previous.bts || [],
@@ -2007,10 +2020,11 @@
         sg: previous.sg || []
       };
       if (malaymail) lists.malaysia = malaymail.slice(0, 7);
+      if (btswire) {
+        var bts = btswire.filter(isBtsWireItem).slice(0, 5);
+        if (bts.length) lists.bts = bts;
+      }
       if (soompi) {
-        var bts = soompi.filter(isBtsItem).slice(0, 5);
-        if (!bts.length) bts = soompi.slice(0, 4);
-        lists.bts = bts;
         var kd = soompi.filter(isDramaItem).slice(0, 6);
         lists.kdrama = kd.length ? kd : soompi.slice(0, 6);
       }
@@ -2044,7 +2058,8 @@
         fetchFeed(FEEDS.malaymail),
         fetchFeed(FEEDS.soompi),
         fetchFeed(FEEDS.mothership),
-        fetchFeed(FEEDS.dramapanda)
+        fetchFeed(FEEDS.dramapanda),
+        fetchFeed(FEEDS.btswire)
       ]).then(function (results) {
         if (reqId !== newsRequestId) return;
         var settled = results.map(function (r) { return r.status === "fulfilled" ? r.value : null; });
@@ -2055,7 +2070,7 @@
           return;
         }
         var previous = newsState.lists;
-        applyFreshNews(settled[0], settled[1], settled[2], settled[3], previous);
+        applyFreshNews(settled[0], settled[1], settled[2], settled[3], settled[4], previous);
         newsState.updatedAt = Date.now();
         newsState.partial = settled.some(function (v) { return !v; });
         saveNewsCache();
@@ -2342,6 +2357,9 @@
           if (Math.min(ii.width || 0, ii.height || 0) < 400) return null;
           var title = (p.title || "").replace(/^File:/, "");
           if (/logo|poster|album|cover|map|pdf|chart|screenshot|billboard|advert|ticket|diagram|document|sheet/i.test(title)) return null;
+          // Commons full-text search also matches passing mentions (e.g. storm reports),
+          // so only keep files whose name actually points at BTS or a member.
+          if (!/bts|bangtan|\ubc29\ud0c4\uc18c\ub144\ub2e8|taehyung|jung[- ]?kook|jimin|seokjin|yoongi|hoseok|j-hope|jhope|namjoon|jeon jung|park ji-min|kim tae-hyung|kim seok-jin|min yoon-gi|jung ho-seok/i.test(title)) return null;
           var em = ii.extmetadata || {};
           var credit = stripHtml((em.Artist || {}).value || "Wikimedia Commons").slice(0, 48);
           var license = stripHtml((em.LicenseShortName || {}).value || "");
