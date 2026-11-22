@@ -1077,6 +1077,17 @@
     }
     #adminPanel input:focus, #adminPanel textarea:focus { border-color: var(--accent); }
     #adminPanel textarea { resize: vertical; min-height: 80px; }
+    .adm-adv { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 12px; }
+    .adm-adv summary {
+      cursor: pointer;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .adm-hint { font-size: 11.5px; color: var(--muted); margin: 10px 0 0; line-height: 1.55; }
+    .adm-adv .icon-btn { margin-top: 12px; width: 100%; }
     .btn-primary {
       width: 100%;
       margin-top: 18px;
@@ -1260,19 +1271,26 @@
       <label>Family Passphrase</label>
       <input type="text" id="admPass" placeholder="e.g. purplehearts2026" />
 
-      <label>Gist IDs (one per line)</label>
-      <textarea id="admGistIds" placeholder="Paste one Gist ID per line"></textarea>
+      <label>GitHub username that owns the photo gists</label>
+      <input type="text" id="admOwner" placeholder="cheatdarren2-cpu" />
 
-      <label>Upload photos into which Gist ID?</label>
-      <input type="text" id="admUploadTarget" placeholder="Target Gist ID" />
-
-      <label>Select Photo(s)</label>
+      <label>Select Photo(s) — as many as you like</label>
       <input type="file" id="admFile" accept="image/*" multiple />
 
       <label>Caption (optional)</label>
       <input type="text" id="admCaption" placeholder="e.g. Cyrus after playschool" />
 
-      <button class="btn-primary" id="admUploadBtn" onclick="uploadEncryptedPhoto()">Encrypt &amp; Add Photo(s)</button>
+      <button class="btn-primary" id="admUploadBtn" onclick="uploadEncryptedPhoto()">Encrypt &amp; upload</button>
+
+      <details class="adm-adv">
+        <summary>Advanced</summary>
+        <p class="adm-hint">Leave the target blank and photos go into the current archive gist; a new gist is started automatically when it is full.</p>
+        <label>Upload into a specific Gist ID (optional)</label>
+        <input type="text" id="admUploadTarget" placeholder="Automatic" />
+        <label>Archive seed Gist ID(s), one per line</label>
+        <textarea id="admGistIds" placeholder="Paste one Gist ID per line"></textarea>
+        <button class="icon-btn" onclick="createArchiveFromAdmin()">Create a new photo archive</button>
+      </details>
       <p id="admStatus" style="font-size:13px;margin-top:10px;color:var(--accent);"></p>
       <div class="admin-photo-list" id="admExistingList"></div>
     </div>
@@ -1446,7 +1464,12 @@
     // =========================================================
     // CONFIG
     // =========================================================
-    var DEFAULT_GIST_IDS = ["3d92b546c1b9ea550f170ad4ccec006d"];
+    // Seed gist(s) for the family photo archive. Only the seed needs to live
+    // here: every archive gist links to the next one it created automatically.
+    var DEFAULT_GIST_IDS = [];
+    // GitHub account that owns the (secret) photo gists. Secret gists are read
+    // through their unlisted raw URL, which needs the owner in the path.
+    var GIST_OWNER = "cheatdarren2-cpu";
     var ADMIN_PASS = "!@#123QWEasd";
     var FALLBACK_LAT = 3.1073;
     var FALLBACK_LON = 101.6067;
@@ -2611,57 +2634,366 @@
     }
 
     // =========================================================
-    // PHOTO ENCRYPTION + MULTI-GIST  (kept intact)
+    // FAMILY PHOTOS — v2 storage: one encrypted file per photo
     // =========================================================
-    async function deriveKey(passphrase, salt) {
+    // v1 packed every photo into a single family_photos.json blob, and the Gist
+    // API only returns the first 1 MB of a file, so the archive died at ~5 photos.
+    // v2 keeps a small encrypted manifest plus one file per photo (and one per
+    // thumbnail), so a gist holds ~120 photos and each view downloads 1 photo.
+    var MANIFEST_FILE = "manifest.json";
+    var LEGACY_FILE = "family_photos.json";
+    var MAX_PHOTOS_PER_GIST = 120;   // 2 files per photo; the Gist API lists 300 files
+    var PHOTO_MAX_W = 1080;
+    var PHOTO_QUALITY = 0.74;
+    var THUMB_MAX_W = 160;
+    var THUMB_QUALITY = 0.58;
+    var CAROUSEL_MS = 9000;
+
+    var currentPhotos = [];
+    var currentPhotoIdx = 0;
+    var carouselTimer = null;
+    var photoRenderToken = 0;
+    var photoCache = {};      // photo id -> decrypted full data URL
+    var thumbCache = {};      // photo id -> decrypted thumbnail data URL
+    var keyCache = {};        // salt|passphrase -> CryptoKey
+    var manifestCache = {};   // gist id -> { salt, key, photos, next }
+    var thumbObserver = null;
+    var TRANSPARENT_PX = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+
+    /* ---------- crypto ---------- */
+    function bytesToB64(bytes) {
+      var s = "", chunk = 0x8000;
+      for (var i = 0; i < bytes.length; i += chunk) {
+        s += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+      }
+      return btoa(s);
+    }
+    function b64ToBytes(b64) {
+      var bin = atob(b64), out = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      return out;
+    }
+    async function deriveKey(passphrase, saltBytes) {
       var enc = new TextEncoder();
       var keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), { name: "PBKDF2" }, false, ["deriveKey"]);
       return crypto.subtle.deriveKey(
-        { name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" },
+        // 100k iterations keeps existing v1 photos decryptable.
+        { name: "PBKDF2", salt: saltBytes, iterations: 100000, hash: "SHA-256" },
         keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]
       );
     }
-    async function encryptString(plainText, passphrase) {
-      var salt = crypto.getRandomValues(new Uint8Array(16));
+    // One salt per gist, so the (slow) key derivation happens once per session
+    // instead of once per photo.
+    async function gistKey(passphrase, saltB64) {
+      var cacheKey = saltB64 + "|" + passphrase;
+      if (keyCache[cacheKey]) return keyCache[cacheKey];
+      var key = await deriveKey(passphrase, b64ToBytes(saltB64));
+      keyCache[cacheKey] = key;
+      return key;
+    }
+    async function encryptWithKey(key, plainText) {
       var iv = crypto.getRandomValues(new Uint8Array(12));
-      var key = await deriveKey(passphrase, salt);
-      var enc = new TextEncoder();
-      var cipherBuffer = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, enc.encode(plainText));
-      return {
-        salt: btoa(String.fromCharCode.apply(null, salt)),
-        iv: btoa(String.fromCharCode.apply(null, iv)),
-        data: btoa(String.fromCharCode.apply(null, new Uint8Array(cipherBuffer)))
-      };
+      var buf = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, new TextEncoder().encode(plainText));
+      return { iv: bytesToB64(iv), data: bytesToB64(new Uint8Array(buf)) };
     }
-    async function decryptObject(encObj, passphrase) {
-      var salt = Uint8Array.from(atob(encObj.salt), function(c) { return c.charCodeAt(0); });
-      var iv = Uint8Array.from(atob(encObj.iv), function(c) { return c.charCodeAt(0); });
-      var cipher = Uint8Array.from(atob(encObj.data), function(c) { return c.charCodeAt(0); });
-      var key = await deriveKey(passphrase, salt);
-      var plainBuffer = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, cipher);
-      return new TextDecoder().decode(plainBuffer);
+    async function decryptWithKey(key, obj) {
+      var buf = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: b64ToBytes(obj.iv) }, key, b64ToBytes(obj.data)
+      );
+      return new TextDecoder().decode(buf);
+    }
+    // v1 items carried their own salt; kept so old gists still open.
+    async function decryptLegacy(obj, passphrase) {
+      var key = await deriveKey(passphrase, b64ToBytes(obj.salt));
+      return decryptWithKey(key, obj);
     }
 
-    function savePassphrase() {
-      var pass = $("passInput").value.trim();
-      if (!pass) return;
-      localStorage.setItem("mom_family_pass", pass);
-      loadFamilyPhotos();
+    /* ---------- gist http ---------- */
+    function adminToken() { return localStorage.getItem("adm_token") || ""; }
+    function gistOwner() { return localStorage.getItem("adm_gist_owner") || GIST_OWNER; }
+    function ghHeaders(token, json) {
+      var h = { "Accept": "application/vnd.github+json" };
+      if (token) h["Authorization"] = "Bearer " + token;
+      if (json) h["Content-Type"] = "application/json";
+      return h;
     }
-    function forgetPassphrase() {
-      localStorage.removeItem("mom_family_pass");
-      currentPhotos = [];
-      if (carouselTimer) clearInterval(carouselTimer);
-      $("photoStrip").hidden = true;
-      $("photoStrip").innerHTML = "";
-      $("photoCount").textContent = "—";
-      renderPhotoLockScreen("");
+    async function ghCall(url, opts) {
+      var res = await fetch(url, opts || {});
+      var text = await res.text();
+      var data = null;
+      try { data = text ? JSON.parse(text) : null; } catch (e) { data = null; }
+      if (!res.ok) {
+        var msg = (data && data.message) || ("GitHub error " + res.status);
+        throw new Error(msg);
+      }
+      return data;
+    }
+    function ghGetGist(id, token) {
+      return ghCall("https://api.github.com/gists/" + id + "?t=" + Date.now(), { headers: ghHeaders(token) });
+    }
+    function ghPatchGist(id, token, files) {
+      return ghCall("https://api.github.com/gists/" + id, {
+        method: "PATCH",
+        headers: ghHeaders(token, true),
+        body: JSON.stringify({ files: files })
+      });
+    }
+    function ghCreateGist(token, files, description) {
+      return ghCall("https://api.github.com/gists", {
+        method: "POST",
+        headers: ghHeaders(token, true),
+        body: JSON.stringify({ description: description, public: false, files: files })
+      });
     }
 
-    // Photos are stored oldest-first in the Gist, so a reload used to restart the
-    // slideshow on photo 1 every time. Fingerprints let us track which photos have
-    // already been shown and resume from there, even as the archive grows.
+    // Reads a gist file without needing a token: secret-gist raw URLs are
+    // readable by anyone holding the (unlisted) URL, and they are served with
+    // CORS *, while the API now rejects anonymous reads of secret gists.
+    async function fetchGistFileText(gistId, filename, token, fresh) {
+      var owner = gistOwner();
+      var candidates = [];
+      if (owner) {
+        candidates.push("https://gist.githubusercontent.com/" + owner + "/" + gistId + "/raw/" + filename);
+        candidates.push("https://gist.github.com/" + owner + "/" + gistId + "/raw/" + filename);
+      }
+      for (var i = 0; i < candidates.length; i++) {
+        try {
+          var url = candidates[i] + (fresh ? "?t=" + Date.now() : "");
+          var res = await fetch(url, fresh ? { cache: "no-store" } : {});
+          if (res.ok) return await res.text();
+        } catch (e) { /* try the next shape */ }
+      }
+      // API fallback (works for public gists, or any gist when a token is set).
+      try {
+        var gist = await ghGetGist(gistId, token);
+        var file = gist && gist.files && gist.files[filename];
+        if (!file) return null;
+        if (file.truncated) {
+          var raw = await fetch(file.raw_url, token ? { headers: { "Authorization": "Bearer " + token } } : {});
+          if (!raw.ok) throw new Error("Unable to download " + filename);
+          return await raw.text();
+        }
+        return file.content;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    /* ---------- manifest ---------- */
+    function manifestPhoto(p) {
+      return { id: p.id, file: p.file, thumb: p.thumb, date: p.date || "", caption: p.caption || "", at: p.at || 0 };
+    }
+    async function readManifest(gistId, passphrase, token, fresh) {
+      if (!fresh && manifestCache[gistId]) return manifestCache[gistId];
+      var text = await fetchGistFileText(gistId, MANIFEST_FILE, token, fresh);
+      if (!text) return null;
+      var wrap = JSON.parse(text);
+      if (!wrap || !wrap.salt || !wrap.iv || !wrap.data) return null;
+      var key = await gistKey(passphrase, wrap.salt);
+      var plain = JSON.parse(await decryptWithKey(key, wrap));
+      var photos = Array.isArray(plain.photos) ? plain.photos : [];
+      for (var i = 0; i < photos.length; i++) {
+        photos[i].gist = gistId;
+        photos[i].key = key;
+        photos[i].at = photos[i].at || 0;
+      }
+      var man = { salt: wrap.salt, key: key, photos: photos, next: plain.next || null };
+      manifestCache[gistId] = man;
+      return man;
+    }
+    async function writeManifest(gistId, token, saltB64, key, photos, next) {
+      var plain = { v: 2, photos: photos.map(manifestPhoto), next: next || null };
+      var enc = await encryptWithKey(key, JSON.stringify(plain));
+      var wrap = JSON.stringify({ salt: saltB64, iv: enc.iv, data: enc.data });
+      await ghPatchGist(gistId, token, { "manifest.json": { content: wrap } });
+      var cached = photos.map(function (p) {
+        var c = manifestPhoto(p);
+        c.gist = gistId;
+        c.key = key;
+        return c;
+      });
+      manifestCache[gistId] = { salt: saltB64, key: key, photos: cached, next: next || null };
+    }
+
+    /* ---------- legacy (v1) gists ---------- */
+    async function readLegacyPhotos(gistId, passphrase, token) {
+      var text = await fetchGistFileText(gistId, LEGACY_FILE, token, true);
+      if (!text) return null;
+      var parsed = JSON.parse(text);
+      var items = Array.isArray(parsed.photos) ? parsed.photos : [];
+      var out = [];
+      for (var i = 0; i < items.length; i++) {
+        try {
+          var p = JSON.parse(await decryptLegacy(items[i], passphrase));
+          p.id = "legacy-" + gistId.slice(0, 8) + "-" + i;
+          p.gist = gistId;
+          p.legacy = true;
+          p.at = Date.parse(p.date || "") || i;
+          out.push(p);
+        } catch (e) { /* skip undecryptable item */ }
+      }
+      return out;
+    }
+
+    /* ---------- reading the archive ---------- */
+    function getGistIds() {
+      var stored = [];
+      try { stored = JSON.parse(localStorage.getItem("adm_gist_ids") || "[]") || []; } catch (e) { stored = []; }
+      var all = stored.concat(DEFAULT_GIST_IDS || []);
+      var out = [];
+      for (var i = 0; i < all.length; i++) {
+        var id = String(all[i] || "").trim();
+        if (id && out.indexOf(id) === -1) out.push(id);
+      }
+      return out;
+    }
+    function saveGistIds(ids) {
+      localStorage.setItem("adm_gist_ids", JSON.stringify(ids));
+    }
+    // Walks the manifest `next` chain so gists created automatically are found
+    // by every device without anyone copying IDs around.
+    async function collectGists(passphrase, token, fresh) {
+      var queue = getGistIds(), seen = {}, ordered = [];
+      while (queue.length) {
+        var id = queue.shift();
+        if (!id || seen[id]) continue;
+        seen[id] = true;
+        ordered.push(id);
+        try {
+          var man = await readManifest(id, passphrase, token, fresh);
+          if (man && man.next) queue.push(man.next);
+        } catch (e) { /* unreadable gist: stop following this branch */ }
+      }
+      return ordered;
+    }
+
+    async function loadFamilyPhotos() {
+      var pass = localStorage.getItem("mom_family_pass");
+      if (!pass) {
+        renderPhotoLockScreen("");
+        return;
+      }
+
+      var ids = getGistIds();
+      if (!ids.length) {
+        renderPhotoLockScreen("No photo archive configured yet. Open #admin to create one.");
+        return;
+      }
+
+      $("lockResetBtn").style.display = "inline-block";
+
+      var token = adminToken();
+      var allPhotos = [], decryptError = false;
+
+      try {
+        var gistIds = await collectGists(pass, token, false);
+        for (var g = 0; g < gistIds.length; g++) {
+          var gistId = gistIds[g];
+          var man = null;
+          try { man = await readManifest(gistId, pass, token, false); } catch (e) { decryptError = true; }
+          if (man) {
+            for (var i = 0; i < man.photos.length; i++) allPhotos.push(man.photos[i]);
+            continue;
+          }
+          var legacy = null;
+          try { legacy = await readLegacyPhotos(gistId, pass, token); } catch (e) { decryptError = true; }
+          if (legacy) {
+            for (var j = 0; j < legacy.length; j++) allPhotos.push(legacy[j]);
+          }
+        }
+      } catch (e) {
+        renderPhotoLockScreen("Could not reach the photo archive. Check your connection.");
+        return;
+      }
+
+      if (decryptError && !allPhotos.length) {
+        localStorage.removeItem("mom_family_pass");
+        renderPhotoLockScreen("Incorrect passphrase or unable to decrypt.");
+        return;
+      }
+
+      if (!allPhotos.length) {
+        $("photoStrip").hidden = true;
+        $("photoStrip").innerHTML = "";
+        $("photoCount").textContent = "0 photos";
+        $("photoContainer").innerHTML =
+          '<div class="lock-panel"><p class="lock-hint">No photos found yet.</p></div>';
+        return;
+      }
+
+      allPhotos.sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
+      currentPhotos = allPhotos;
+      currentPhotoIdx = initialPhotoIndex();
+      renderPhotoStrip();
+      renderCurrentPhoto();
+      startCarouselTimer();
+    }
+
+    /* ---------- thumbnails + full images ---------- */
+    function thumbOf(p) {
+      if (p.img) return p.img;            // legacy inline photo
+      return thumbCache[p.id] || "";
+    }
+    async function getPhotoFileText(p, kind) {
+      var name = kind === "thumb" ? p.thumb : p.file;
+      if (!name) return null;
+      var text = await fetchGistFileText(p.gist, name, adminToken(), false);
+      if (!text) throw new Error("Missing photo file");
+      return text;
+    }
+    async function getPhotoImageUrl(p) {
+      if (p.img) return p.img;
+      if (photoCache[p.id]) return photoCache[p.id];
+      var text = await getPhotoFileText(p, "photo");
+      var payload = JSON.parse(await decryptWithKey(p.key, JSON.parse(text)));
+      if (!p.caption && payload.caption) p.caption = payload.caption;
+      if (!p.date && payload.date) p.date = payload.date;
+      photoCache[p.id] = payload.img;
+      return payload.img;
+    }
+    function loadThumbFor(imgEl) {
+      var i = parseInt(imgEl.getAttribute("data-i"), 10);
+      var p = currentPhotos[i];
+      if (!p) return;
+      if (thumbOf(p)) {
+        imgEl.src = thumbOf(p);
+        imgEl.removeAttribute("data-thumb");
+        return;
+      }
+      getPhotoFileText(p, "thumb").then(function (text) {
+        return JSON.parse(text);
+      }).then(function (obj) {
+        return decryptWithKey(p.key, obj);
+      }).then(function (dataUrl) {
+        thumbCache[p.id] = dataUrl;
+        imgEl.src = dataUrl;
+        imgEl.removeAttribute("data-thumb");
+      }).catch(function () { /* leave the placeholder */ });
+    }
+    function observeThumbs() {
+      var strip = $("photoStrip");
+      if (!strip) return;
+      if (thumbObserver) { thumbObserver.disconnect(); thumbObserver = null; }
+      var pending = strip.querySelectorAll("img[data-thumb]");
+      if (!pending.length) return;
+      if (!("IntersectionObserver" in window)) {
+        for (var i = 0; i < pending.length; i++) loadThumbFor(pending[i]);
+        return;
+      }
+      thumbObserver = new IntersectionObserver(function (entries) {
+        for (var i = 0; i < entries.length; i++) {
+          if (entries[i].isIntersecting) {
+            thumbObserver.unobserve(entries[i].target);
+            loadThumbFor(entries[i].target);
+          }
+        }
+      }, { root: strip, rootMargin: "0px 240px" });
+      for (var j = 0; j < pending.length; j++) thumbObserver.observe(pending[j]);
+    }
+
+    /* ---------- filmstrip ---------- */
     function photoFingerprint(p) {
+      if (p.id) return p.id;
       var img = p.img || "";
       return (p.date || "") + "|" + (p.caption || "") + "|" + img.length + "|" + img.slice(-24);
     }
@@ -2693,15 +3025,18 @@
       for (var i = 0; i < currentPhotos.length; i++) {
         var p = currentPhotos[i];
         var isNew = !seen.has(photoFingerprint(p));
+        var thumb = thumbOf(p);
         html += '<button type="button" class="photo-thumb' +
           (i === currentPhotoIdx ? " active" : "") + (isNew ? " is-new" : "") +
           '" data-i="' + i + '" aria-label="Photo ' + (i + 1) + '" title="' +
           esc((p.caption ? p.caption + " · " : "") + (p.date || "")) + '">' +
-          '<img src="' + p.img + '" alt="" loading="lazy" decoding="async" />' +
+          '<img src="' + (thumb || TRANSPARENT_PX) + '"' + (thumb ? "" : ' data-thumb="1"') +
+          ' alt="" loading="lazy" decoding="async" />' +
           "</button>";
       }
       strip.innerHTML = html;
       strip.hidden = false;
+      observeThumbs();
       scrollStripToActive();
     }
     function updatePhotoStripActive() {
@@ -2722,109 +3057,21 @@
       var target = active.offsetLeft - (strip.clientWidth - active.offsetWidth) / 2;
       strip.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
     }
-    // Show the newest photo the user has not seen yet. Once everything has been
-    // viewed, continue after the last photo shown rather than restarting at photo 1.
     function initialPhotoIndex() {
       var seen = getSeenPhotos();
       for (var i = 0; i < currentPhotos.length; i++) {
         if (!seen.has(photoFingerprint(currentPhotos[i]))) return i;
       }
       var last = parseInt(localStorage.getItem(PHOTO_LAST_KEY) || "-1", 10);
-      return last >= 0 && last < currentPhotos.length ? (last + 1) % currentPhotos.length : 0;
-    }
-    function selectPhoto(idx) {
-      if (!currentPhotos.length) return;
-      currentPhotoIdx = (idx + currentPhotos.length) % currentPhotos.length;
-      renderCurrentPhoto();
-      startCarouselTimer();
-    }
-    function startCarouselTimer() {
-      if (carouselTimer) clearInterval(carouselTimer);
-      carouselTimer = null;
-      if (currentPhotos.length > 1) {
-        carouselTimer = setInterval(function () { stepPhoto(1); }, 12000);
-      }
-    }
-    function renderPhotoLockScreen(errorMsg) {
-      $("lockResetBtn").style.display = "none";
-      $("photoContainer").innerHTML =
-        '<div class="lock-panel">' +
-          '<div class="lock-ico">🔒</div>' +
-          '<p class="lock-hint">Enter the family passphrase to view photos</p>' +
-          '<input type="password" id="passInput" placeholder="Passphrase" />' +
-          '<button onclick="savePassphrase()">Unlock</button>' +
-          (errorMsg ? '<p class="lock-error">' + esc(errorMsg) + "</p>" : "") +
-        "</div>";
-      var input = $("passInput");
-      if (input) input.addEventListener("keydown", function (e) { if (e.key === "Enter") savePassphrase(); });
+      if (last >= 0 && currentPhotos.length) return (last + 1) % currentPhotos.length;
+      return 0;
     }
 
-    function parseGistPhotosFile(gist) {
-      if (!gist || !gist.files) throw new Error(gist && gist.message ? gist.message : "Unable to read Gist.");
-      var targetFile = gist.files["family_photos.json"];
-      if (!targetFile) {
-        var keys = Object.keys(gist.files);
-        if (keys.length === 0) throw new Error("Gist contains no files.");
-        targetFile = gist.files[keys[0]];
-      }
-      var parsed = JSON.parse(targetFile.content || '{"photos":[]}');
-      if (!Array.isArray(parsed.photos)) parsed.photos = [];
-      return parsed;
-    }
-
-    async function loadFamilyPhotos() {
-      var pass = localStorage.getItem("mom_family_pass");
-      if (!pass) {
-        renderPhotoLockScreen("");
-        return;
-      }
-
-      var gistIds = JSON.parse(localStorage.getItem("adm_gist_ids") || "null") || DEFAULT_GIST_IDS;
-      if (!gistIds.length) {
-        renderPhotoLockScreen("No Gist IDs configured.");
-        return;
-      }
-
-      $("lockResetBtn").style.display = "inline-block";
-
-      try {
-        var allPhotos = [];
-        for (var g = 0; g < gistIds.length; g++) {
-          var res = await fetch("https://api.github.com/gists/" + gistIds[g] + "?t=" + Date.now());
-          var gist = await res.json();
-          var parsed = parseGistPhotosFile(gist);
-          for (var i = 0; i < parsed.photos.length; i++) {
-            try {
-              var jsonStr = await decryptObject(parsed.photos[i], pass);
-              allPhotos.push(JSON.parse(jsonStr));
-            } catch (e) {}
-          }
-        }
-
-        if (allPhotos.length === 0) {
-          $("photoStrip").hidden = true;
-          $("photoStrip").innerHTML = "";
-          $("photoCount").textContent = "0 photos";
-          $("photoContainer").innerHTML =
-            '<div class="lock-panel"><p class="lock-hint">No photos found yet.</p></div>';
-          return;
-        }
-
-        currentPhotos = allPhotos.reverse();
-
-        currentPhotoIdx = initialPhotoIndex();
-        renderPhotoStrip();
-        renderCurrentPhoto();
-        startCarouselTimer();
-      } catch (e) {
-        localStorage.removeItem("mom_family_pass");
-        renderPhotoLockScreen("Incorrect passphrase or unable to decrypt.");
-      }
-    }
-
+    /* ---------- current photo ---------- */
     function renderCurrentPhoto() {
       if (!currentPhotos.length) return;
       var p = currentPhotos[currentPhotoIdx];
+      var token = ++photoRenderToken;
       var nav = currentPhotos.length > 1
         ? '<button class="photo-nav prev" onclick="stepPhoto(-1)" aria-label="Previous photo">‹</button><button class="photo-nav next" onclick="stepPhoto(1)" aria-label="Next photo">›</button>'
         : "";
@@ -2836,17 +3083,101 @@
       var unseen = unseenPhotoCount();
       $("photoCount").textContent = currentPhotos.length + " photos" + (unseen ? " · " + unseen + " new" : "");
       $("photoContainer").innerHTML =
-        '<img class="photo-img" src="' + p.img + '" alt="Family photo" onload="this.classList.add(\'is-loaded\')" onerror="this.classList.add(\'is-loaded\')" />' + nav +
+        '<img class="photo-img' + (thumbOf(p) ? " is-loaded" : "") + '" src="' + (thumbOf(p) || TRANSPARENT_PX) + '" alt="Family photo" />' + nav +
         '<div class="photo-caption">' +
           (p.caption ? esc(p.caption) : "") +
           "<small>" + esc(p.date || "") + " · " + (currentPhotoIdx + 1) + " of " + currentPhotos.length + "</small>" +
         "</div>";
+
+      // Show the small thumbnail straight away; the full photo follows.
+      if (!thumbOf(p) && p.thumb) {
+        getPhotoFileText(p, "thumb").then(function (text) {
+          return decryptWithKey(p.key, JSON.parse(text));
+        }).then(function (dataUrl) {
+          thumbCache[p.id] = dataUrl;
+          if (token !== photoRenderToken) return;
+          var el = document.querySelector("#photoContainer .photo-img");
+          if (el) { el.src = dataUrl; el.classList.add("is-loaded"); }
+        }).catch(function () {});
+      }
+
       updatePhotoStripActive();
+
+      getPhotoImageUrl(p).then(function (src) {
+        if (token !== photoRenderToken) return;
+        var el = document.querySelector("#photoContainer .photo-img");
+        if (!el) return;
+        el.src = src;
+        el.classList.add("is-loaded");
+        prefetchNeighbour(1);
+      }).catch(function () {
+        if (token !== photoRenderToken) return;
+        var el = document.querySelector("#photoContainer .photo-img");
+        if (el) el.classList.add("is-loaded");
+      });
+    }
+    function prefetchNeighbour(delta) {
+      if (currentPhotos.length < 2) return;
+      var idx = (currentPhotoIdx + delta + currentPhotos.length) % currentPhotos.length;
+      var p = currentPhotos[idx];
+      if (p && !p.img && !photoCache[p.id]) {
+        getPhotoImageUrl(p).catch(function () {});
+      }
+    }
+    function selectPhoto(i) {
+      if (!isFinite(i) || i < 0 || i >= currentPhotos.length) return;
+      currentPhotoIdx = i;
+      renderCurrentPhoto();
+      startCarouselTimer();
     }
     function stepPhoto(delta) {
       if (!currentPhotos.length) return;
       currentPhotoIdx = (currentPhotoIdx + delta + currentPhotos.length) % currentPhotos.length;
       renderCurrentPhoto();
+      startCarouselTimer();
+    }
+    function startCarouselTimer() {
+      if (carouselTimer) clearInterval(carouselTimer);
+      carouselTimer = setInterval(function () {
+        if (document.hidden || !currentPhotos.length) return;
+        currentPhotoIdx = (currentPhotoIdx + 1) % currentPhotos.length;
+        renderCurrentPhoto();
+      }, CAROUSEL_MS);
+    }
+
+    /* ---------- lock screen ---------- */
+    function renderPhotoLockScreen(errorMsg) {
+      if (carouselTimer) clearInterval(carouselTimer);
+      $("lockResetBtn").style.display = "none";
+      $("photoCount").textContent = "—";
+      $("photoContainer").innerHTML =
+        '<div class="lock-panel">' +
+          '<div class="lock-ico">🔒</div>' +
+          '<p class="lock-hint">Enter the family passphrase to view photos</p>' +
+          '<input type="password" id="passInput" placeholder="Passphrase" />' +
+          '<button onclick="savePassphrase()">Unlock</button>' +
+          (errorMsg ? '<p class="lock-error">' + esc(errorMsg) + "</p>" : "") +
+        "</div>";
+      var input = $("passInput");
+      if (input) input.addEventListener("keydown", function (e) { if (e.key === "Enter") savePassphrase(); });
+    }
+    function savePassphrase() {
+      var pass = $("passInput").value.trim();
+      if (!pass) return;
+      localStorage.setItem("mom_family_pass", pass);
+      loadFamilyPhotos();
+    }
+    function forgetPassphrase() {
+      localStorage.removeItem("mom_family_pass");
+      currentPhotos = [];
+      photoCache = {};
+      thumbCache = {};
+      manifestCache = {};
+      if (carouselTimer) clearInterval(carouselTimer);
+      $("photoStrip").hidden = true;
+      $("photoStrip").innerHTML = "";
+      $("photoCount").textContent = "—";
+      renderPhotoLockScreen("");
     }
 
     $("photoStrip").addEventListener("click", function (e) {
@@ -2867,8 +3198,9 @@
           $("adminPanel").style.display = "block";
           $("admToken").value = localStorage.getItem("adm_token") || "";
           $("admPass").value = localStorage.getItem("adm_pass") || "";
-          var ids = JSON.parse(localStorage.getItem("adm_gist_ids") || "null") || DEFAULT_GIST_IDS;
-          $("admGistIds").value = ids.join("\n");
+          $("admOwner").value = localStorage.getItem("adm_gist_owner") || GIST_OWNER;
+          $("admGistIds").value = getGistIds().join("\n");
+          $("admUploadTarget").value = localStorage.getItem("adm_active_gist") || "";
         } else {
           alert("Wrong password");
           history.replaceState(null, "", window.location.pathname);
@@ -2881,87 +3213,198 @@
       history.replaceState(null, "", window.location.pathname);
     }
 
-    function compressImageFile(file) {
-      return new Promise(function(resolve) {
+    function newPhotoId() {
+      var bytes = crypto.getRandomValues(new Uint8Array(9));
+      return bytesToB64(bytes).replace(/[^a-zA-Z0-9]/g, "").slice(0, 12);
+    }
+
+    /* ---------- image preparation ---------- */
+    function drawScaled(img, maxW, quality) {
+      var scale = img.width > maxW ? maxW / img.width : 1;
+      var canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL("image/jpeg", quality);
+    }
+    function prepareImageFile(file) {
+      return new Promise(function (resolve, reject) {
         var reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = function (e) {
           var img = new Image();
-          img.onload = function() {
-            var maxW = 720;
-            var scale = img.width > maxW ? maxW / img.width : 1;
-            var canvas = document.createElement("canvas");
-            canvas.width = Math.round(img.width * scale);
-            canvas.height = Math.round(img.height * scale);
-            var ctx = canvas.getContext("2d");
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            resolve(canvas.toDataURL("image/jpeg", 0.62));
+          img.onload = function () {
+            resolve({
+              img: drawScaled(img, PHOTO_MAX_W, PHOTO_QUALITY),
+              thumb: drawScaled(img, THUMB_MAX_W, THUMB_QUALITY)
+            });
           };
+          img.onerror = function () { reject(new Error("Could not read " + file.name)); };
           img.src = e.target.result;
         };
+        reader.onerror = function () { reject(new Error("Could not read " + file.name)); };
         reader.readAsDataURL(file);
       });
     }
 
+    /* ---------- gist plumbing for uploads ---------- */
+    async function createPhotoGist(token, passphrase) {
+      var salt = bytesToB64(crypto.getRandomValues(new Uint8Array(16)));
+      var key = await gistKey(passphrase, salt);
+      var enc = await encryptWithKey(key, JSON.stringify({ v: 2, photos: [], next: null }));
+      var wrap = JSON.stringify({ salt: salt, iv: enc.iv, data: enc.data });
+      var gist = await ghCreateGist(token, { "manifest.json": { content: wrap } }, "jen-family-photos");
+      if (gist && gist.owner && gist.owner.login) localStorage.setItem("adm_gist_owner", gist.owner.login);
+      var ids = getGistIds();
+      if (ids.indexOf(gist.id) === -1) { ids.push(gist.id); saveGistIds(ids); }
+      localStorage.setItem("adm_active_gist", gist.id);
+      manifestCache[gist.id] = { salt: salt, key: key, photos: [], next: null };
+      return { gist: gist.id, salt: salt, key: key, photos: [], count: 0, next: null };
+    }
+
+    async function migrateLegacyGist(gistId, token, passphrase) {
+      var text = await fetchGistFileText(gistId, LEGACY_FILE, token, true);
+      if (!text) return null;
+      var items = (JSON.parse(text).photos || []);
+      var salt = bytesToB64(crypto.getRandomValues(new Uint8Array(16)));
+      var key = await gistKey(passphrase, salt);
+      var photos = [], batch = {}, batchBytes = 0;
+
+      async function flush(extra) {
+        var files = {};
+        for (var k in batch) files[k] = { content: batch[k] };
+        if (extra) for (var e in extra) files[e] = extra[e];
+        if (Object.keys(files).length) await ghPatchGist(gistId, token, files);
+        batch = {}; batchBytes = 0;
+      }
+
+      for (var i = 0; i < items.length; i++) {
+        $("admStatus").textContent = "Converting old photos " + (i + 1) + " of " + items.length + "…";
+        var obj;
+        try { obj = JSON.parse(await decryptLegacy(items[i], passphrase)); } catch (err) { continue; }
+        var pid = newPhotoId();
+        var pName = "p-" + pid + ".json", tName = "t-" + pid + ".json";
+        var full = await encryptWithKey(key, JSON.stringify({ img: obj.img, caption: obj.caption || "", date: obj.date || "" }));
+        var thumb = await encryptWithKey(key, obj.img);
+        batch[pName] = JSON.stringify(full);
+        batch[tName] = JSON.stringify(thumb);
+        batchBytes += full.data.length + thumb.data.length;
+        photos.push({ id: pid, file: pName, thumb: tName, date: obj.date || "", caption: obj.caption || "", at: i });
+        if (batchBytes > 1000000) await flush();
+      }
+      await flush();
+      await writeManifest(gistId, token, salt, key, photos, null);
+      await ghPatchGist(gistId, token, { "family_photos.json": null });
+      return { gist: gistId, salt: salt, key: key, photos: photos, count: photos.length, next: null };
+    }
+
+    // Opens (migrating a v1 gist if needed) and reports how full it is.
+    async function prepareGist(gistId, token, passphrase) {
+      var gist = await ghGetGist(gistId, token);
+      if (!gist || !gist.files) throw new Error("Gist not found: " + gistId);
+      var hasManifest = !!gist.files[MANIFEST_FILE];
+      var hasLegacy = !!gist.files[LEGACY_FILE];
+      if (!hasManifest && hasLegacy) {
+        var migrated = await migrateLegacyGist(gistId, token, passphrase);
+        if (migrated) return migrated;
+      }
+      var man = await readManifest(gistId, passphrase, token, true);
+      if (!man) throw new Error("Gist " + gistId + " has no readable photo manifest.");
+      return { gist: gistId, salt: man.salt, key: man.key, photos: man.photos, count: man.photos.length, next: man.next };
+    }
+
+    async function ensureUploadTarget(token, passphrase) {
+      var ids = getGistIds();
+      var active = (localStorage.getItem("adm_active_gist") || "").trim();
+      if (active && ids.indexOf(active) === -1) ids.push(active);
+      if (!active && ids.length) active = ids[ids.length - 1];
+
+      if (active) {
+        var state = await prepareGist(active, token, passphrase);
+        if (state.count < MAX_PHOTOS_PER_GIST) return state;
+        $("admStatus").textContent = "This gist is full — starting a new one…";
+      }
+      var fresh = await createPhotoGist(token, passphrase);
+      if (active) {
+        try {
+          var old = await prepareGist(active, token, passphrase);
+          await writeManifest(active, token, old.salt, old.key, old.photos, fresh.gist);
+        } catch (e) { /* chaining is a convenience; the new gist still works as a seed */ }
+      }
+      return fresh;
+    }
+
+    /* ---------- upload ---------- */
     async function uploadEncryptedPhoto() {
       var token = $("admToken").value.trim();
       var pass = $("admPass").value.trim();
-      var targetGist = $("admUploadTarget").value.trim();
+      var owner = $("admOwner").value.trim();
+      var targetOverride = $("admUploadTarget").value.trim();
       var fileInput = $("admFile");
       var caption = $("admCaption").value.trim();
       var statusEl = $("admStatus");
       var uploadBtn = $("admUploadBtn");
 
-      var gistIdsText = $("admGistIds").value.trim();
-      var gistIds = gistIdsText.split("\n").map(function(s){ return s.trim(); }).filter(Boolean);
-      localStorage.setItem("adm_gist_ids", JSON.stringify(gistIds));
       localStorage.setItem("adm_token", token);
       localStorage.setItem("adm_pass", pass);
+      if (owner) localStorage.setItem("adm_gist_owner", owner);
+      saveGistIds($("admGistIds").value.split("\n").map(function (s) { return s.trim(); }).filter(Boolean));
 
-      if (!token || !pass || !targetGist || !fileInput.files.length) {
-        statusEl.textContent = "Please fill Token, Passphrase, Target Gist ID, and select photos.";
+      if (!token || !pass || !fileInput.files.length) {
+        statusEl.textContent = "Please fill in the token, the passphrase and choose at least one photo.";
         return;
       }
 
       uploadBtn.disabled = true;
       try {
-        statusEl.textContent = "Fetching existing photos...";
-        var getRes = await fetch("https://api.github.com/gists/" + targetGist + "?t=" + Date.now(), {
-          headers: { "Authorization": "Bearer " + token, "Accept": "application/vnd.github+json" }
-        });
-        var gist = await getRes.json();
-        var existing = parseGistPhotosFile(gist);
+        statusEl.textContent = "Checking where the photos go…";
+        var state;
+        if (targetOverride) {
+          state = await prepareGist(targetOverride, token, pass);
+          if (state.count >= MAX_PHOTOS_PER_GIST) {
+            throw new Error("That gist already holds " + state.count + " photos. Clear the target box to let a new gist start automatically.");
+          }
+          localStorage.setItem("adm_active_gist", state.gist);
+        } else {
+          state = await ensureUploadTarget(token, pass);
+        }
 
         var files = Array.prototype.slice.call(fileInput.files);
         var dateStr = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+        var batch = {}, batchBytes = 0;
+
+        async function flush(extra) {
+          var payload = {};
+          for (var k in batch) payload[k] = { content: batch[k] };
+          if (extra) for (var e in extra) payload[e] = extra[e];
+          if (Object.keys(payload).length) await ghPatchGist(state.gist, token, payload);
+          batch = {}; batchBytes = 0;
+        }
 
         for (var i = 0; i < files.length; i++) {
-          statusEl.textContent = "Encrypting photo " + (i + 1) + " of " + files.length + "...";
-          var dataUrl = await compressImageFile(files[i]);
-          var payloadObj = { img: dataUrl, caption: caption, date: dateStr };
-          var encryptedItem = await encryptString(JSON.stringify(payloadObj), pass);
-          existing.photos.push(encryptedItem);
+          statusEl.textContent = "Preparing photo " + (i + 1) + " of " + files.length + "…";
+          var sized = await prepareImageFile(files[i]);
+          var pid = newPhotoId();
+          var pName = "p-" + pid + ".json", tName = "t-" + pid + ".json";
+          var full = await encryptWithKey(state.key, JSON.stringify({ img: sized.img, caption: caption, date: dateStr }));
+          var thumb = await encryptWithKey(state.key, sized.thumb);
+          batch[pName] = JSON.stringify(full);
+          batch[tName] = JSON.stringify(thumb);
+          batchBytes += full.data.length + thumb.data.length;
+          state.photos.push({ id: pid, file: pName, thumb: tName, date: dateStr, caption: caption, at: Date.now() + i });
+          if (batchBytes > 1000000) await flush();
         }
 
-        statusEl.textContent = "Saving...";
-        var patchRes = await fetch("https://api.github.com/gists/" + targetGist, {
-          method: "PATCH",
-          headers: {
-            "Authorization": "Bearer " + token,
-            "Accept": "application/vnd.github+json",
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            files: { "family_photos.json": { content: JSON.stringify(existing) } }
-          })
-        });
-        if (!patchRes.ok) {
-          var errData = await patchRes.json();
-          throw new Error(errData.message || "Failed to save");
-        }
+        await flush();
+        statusEl.textContent = "Saving the manifest…";
+        await writeManifest(state.gist, token, state.salt, state.key, state.photos, state.next);
 
-        statusEl.textContent = "Added " + files.length + " photo(s)!";
+        statusEl.textContent = "Added " + files.length + " photo(s). This gist now holds " +
+          state.photos.length + " of " + MAX_PHOTOS_PER_GIST + ".";
         fileInput.value = "";
         $("admCaption").value = "";
+        manifestCache = {};
+        photoCache = {};
+        thumbCache = {};
         await loadFamilyPhotos();
       } catch (err) {
         statusEl.textContent = "Upload failed: " + err.message;
@@ -2970,6 +3413,25 @@
       }
     }
 
+    async function createArchiveFromAdmin() {
+      var token = $("admToken").value.trim();
+      var pass = $("admPass").value.trim();
+      var owner = $("admOwner").value.trim();
+      var statusEl = $("admStatus");
+      if (!token || !pass) { statusEl.textContent = "Enter your token and passphrase first."; return; }
+      localStorage.setItem("adm_token", token);
+      localStorage.setItem("adm_pass", pass);
+      if (owner) localStorage.setItem("adm_gist_owner", owner);
+      try {
+        statusEl.textContent = "Creating a new secret gist…";
+        var fresh = await createPhotoGist(token, pass);
+        $("admGistIds").value = getGistIds().join("\n");
+        statusEl.textContent = "Archive created: " + fresh.gist +
+          " — paste this ID into DEFAULT_GIST_IDS in index.html so every device can find it.";
+      } catch (err) {
+        statusEl.textContent = "Could not create the gist: " + err.message;
+      }
+    }
     // =========================================================
     // INIT
     // =========================================================
