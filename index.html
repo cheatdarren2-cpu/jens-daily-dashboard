@@ -1314,6 +1314,11 @@
 
       <button class="btn-primary" id="admUploadBtn" onclick="uploadEncryptedPhoto()">Encrypt &amp; upload</button>
 
+      <label>Connect another device (tablet, laptop, another phone)</label>
+      <p class="adm-hint">Open this link once on the other device. It only points at your encrypted archive — the family passphrase is still required to see anything.</p>
+      <input type="text" id="admDeviceLink" readonly placeholder="Upload a photo first — the link appears once the archive is known." />
+      <button class="icon-btn" onclick="copyDeviceLink()">Copy device link</button>
+
       <details class="adm-adv">
         <summary>Advanced</summary>
         <p class="adm-hint">Leave the target blank and photos go into the current archive gist; a new gist is started automatically when it is full.</p>
@@ -1497,8 +1502,9 @@
     // =========================================================
     // CONFIG
     // =========================================================
-    // Seed gist(s) for the family photo archive. Only the seed needs to live
-    // here: every archive gist links to the next one it created automatically.
+    // Optional seed gist(s) for the family photo archive. Normally not needed:
+    // the admin panel produces a "device link" that registers the real archive
+    // IDs on every other device, and each gist links to the next one automatically.
     var DEFAULT_GIST_IDS = [];
     // GitHub account that owns the (secret) photo gists. Secret gists are read
     // through their unlisted raw URL, which needs the owner in the path.
@@ -2688,8 +2694,8 @@
     var MANIFEST_FILE = "manifest.json";
     var LEGACY_FILE = "family_photos.json";
     var MAX_PHOTOS_PER_GIST = 120;   // 2 files per photo; the Gist API lists 300 files
-    var PHOTO_MAX_W = 1080;
-    var PHOTO_QUALITY = 0.74;
+    var PHOTO_MAX_W = 1400;
+    var PHOTO_QUALITY = 0.76;
     var THUMB_MAX_W = 160;
     var THUMB_QUALITY = 0.58;
     var CAROUSEL_MS = 9000;
@@ -2702,7 +2708,6 @@
     var thumbCache = {};      // photo id -> decrypted thumbnail data URL
     var keyCache = {};        // salt|passphrase -> CryptoKey
     var manifestCache = {};   // gist id -> { salt, key, photos, next }
-    var thumbObserver = null;
     var TRANSPARENT_PX = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 
     /* ---------- crypto ---------- */
@@ -2881,6 +2886,31 @@
     }
 
     /* ---------- reading the archive ---------- */
+    // A device link (…?photos=<id,id>&owner=<user>) teaches a fresh device
+    // which gists make up the archive, then drops the parameters from the URL
+    // so the IDs are not left in the address bar or in shared history.
+    function applyDeviceLink() {
+      var search = window.location.search || "";
+      var match = search.match(/[?&]photos=([^&]+)/);
+      if (!match) return;
+      var raw = "";
+      try { raw = decodeURIComponent(match[1].replace(/\+/g, " ")); } catch (e) { raw = ""; }
+      var incoming = raw.split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+      if (incoming.length) {
+        var ids = getGistIds();
+        for (var i = 0; i < incoming.length; i++) {
+          if (ids.indexOf(incoming[i]) === -1) ids.push(incoming[i]);
+        }
+        saveGistIds(ids);
+      }
+      var ownerMatch = search.match(/[?&]owner=([^&]+)/);
+      if (ownerMatch) {
+        try { localStorage.setItem("adm_gist_owner", decodeURIComponent(ownerMatch[1])); } catch (e) {}
+      }
+      try {
+        history.replaceState(null, "", window.location.pathname + (window.location.hash || ""));
+      } catch (e) { /* older browsers: leave the URL alone */ }
+    }
     function getGistIds() {
       var stored = [];
       try { stored = JSON.parse(localStorage.getItem("adm_gist_ids") || "[]") || []; } catch (e) { stored = []; }
@@ -2921,9 +2951,12 @@
 
       var ids = getGistIds();
       if (!ids.length) {
-        renderPhotoLockScreen("No photo archive configured yet. Open #admin to create one.");
+        renderPhotoLockScreen("No photo archive configured yet. Open the device link from #admin on this device.");
         return;
       }
+
+      thumbQueue = [];
+      thumbFailed = {};
 
       $("lockResetBtn").style.display = "inline-block";
 
@@ -2996,44 +3029,84 @@
       photoCache[p.id] = payload.img;
       return payload.img;
     }
-    function loadThumbFor(imgEl) {
-      var i = parseInt(imgEl.getAttribute("data-i"), 10);
-      var p = currentPhotos[i];
-      if (!p) return;
-      if (thumbOf(p)) {
-        imgEl.src = thumbOf(p);
-        imgEl.removeAttribute("data-thumb");
-        return;
+    // Every thumbnail is its own encrypted gist file, so they go through a
+    // small queue (3 at a time) and are painted by photo id — not by element
+    // reference, which is lost whenever the filmstrip re-renders.
+    var thumbQueue = [], thumbActive = 0, thumbInFlight = {}, thumbFailed = {};
+    var THUMB_CONCURRENCY = 3;
+    var thumbScrollRaf = 0;
+    var thumbScrollBound = false;
+
+    function paintThumb(p) {
+      var strip = $("photoStrip");
+      if (!strip || !thumbCache[p.id]) return;
+      var imgs = strip.querySelectorAll("img[data-thumb]");
+      for (var i = 0; i < imgs.length; i++) {
+        var idx = parseInt(imgs[i].getAttribute("data-i"), 10);
+        if (currentPhotos[idx] && currentPhotos[idx].id === p.id) {
+          imgs[i].src = thumbCache[p.id];
+          imgs[i].removeAttribute("data-thumb");
+        }
       }
-      getPhotoFileText(p, "thumb").then(function (text) {
-        return JSON.parse(text);
-      }).then(function (obj) {
-        return decryptWithKey(p.key, obj);
+    }
+    function loadThumbFor(p) {
+      if (!p) return Promise.resolve("");
+      if (p.img) return Promise.resolve(p.img);
+      if (thumbCache[p.id]) return Promise.resolve(thumbCache[p.id]);
+      if (thumbInFlight[p.id]) return thumbInFlight[p.id];
+      var job = getPhotoFileText(p, "thumb").then(function (text) {
+        return decryptWithKey(p.key, JSON.parse(text));
       }).then(function (dataUrl) {
         thumbCache[p.id] = dataUrl;
-        imgEl.src = dataUrl;
-        imgEl.removeAttribute("data-thumb");
-      }).catch(function () { /* leave the placeholder */ });
+        paintThumb(p);
+        return dataUrl;
+      }).catch(function () {
+        thumbFailed[p.id] = true;
+        return "";
+      }).then(function (result) {
+        delete thumbInFlight[p.id];
+        return result;
+      });
+      thumbInFlight[p.id] = job;
+      return job;
     }
-    function observeThumbs() {
+    function pumpThumbs() {
+      while (thumbActive < THUMB_CONCURRENCY && thumbQueue.length) {
+        var p = thumbQueue.shift();
+        thumbActive++;
+        loadThumbFor(p).then(function () { thumbActive--; pumpThumbs(); });
+      }
+    }
+    function queueThumb(p) {
+      if (!p || p.img || thumbCache[p.id] || thumbFailed[p.id] || thumbInFlight[p.id]) return;
+      if (thumbQueue.indexOf(p) === -1) thumbQueue.push(p);
+      pumpThumbs();
+    }
+    // Loads the thumbs in (or just outside) the visible filmstrip window.
+    function loadVisibleThumbs() {
+      var strip = $("photoStrip");
+      if (!strip || strip.hidden) return;
+      var left = strip.scrollLeft - 240;
+      var right = strip.scrollLeft + strip.clientWidth + 240;
+      var kids = strip.children;
+      for (var i = 0; i < kids.length; i++) {
+        var el = kids[i];
+        var elLeft = el.offsetLeft, elRight = elLeft + el.offsetWidth;
+        if (elRight >= left && elLeft <= right) queueThumb(currentPhotos[i]);
+      }
+    }
+    function bindThumbScroll() {
+      if (thumbScrollBound) return;
       var strip = $("photoStrip");
       if (!strip) return;
-      if (thumbObserver) { thumbObserver.disconnect(); thumbObserver = null; }
-      var pending = strip.querySelectorAll("img[data-thumb]");
-      if (!pending.length) return;
-      if (!("IntersectionObserver" in window)) {
-        for (var i = 0; i < pending.length; i++) loadThumbFor(pending[i]);
-        return;
-      }
-      thumbObserver = new IntersectionObserver(function (entries) {
-        for (var i = 0; i < entries.length; i++) {
-          if (entries[i].isIntersecting) {
-            thumbObserver.unobserve(entries[i].target);
-            loadThumbFor(entries[i].target);
-          }
-        }
-      }, { root: strip, rootMargin: "0px 240px" });
-      for (var j = 0; j < pending.length; j++) thumbObserver.observe(pending[j]);
+      thumbScrollBound = true;
+      strip.addEventListener("scroll", function () {
+        if (thumbScrollRaf) return;
+        thumbScrollRaf = requestAnimationFrame(function () {
+          thumbScrollRaf = 0;
+          loadVisibleThumbs();
+        });
+      }, { passive: true });
     }
 
     /* ---------- filmstrip ---------- */
@@ -3075,13 +3148,14 @@
           (i === currentPhotoIdx ? " active" : "") + (isNew ? " is-new" : "") +
           '" data-i="' + i + '" aria-label="Photo ' + (i + 1) + '" title="' +
           esc((p.caption ? p.caption + " · " : "") + (p.date || "")) + '">' +
-          '<img src="' + (thumb || TRANSPARENT_PX) + '"' + (thumb ? "" : ' data-thumb="1"') +
+          '<img src="' + (thumb || TRANSPARENT_PX) + '" data-i="' + i + '"' + (thumb ? "" : ' data-thumb="1"') +
           ' alt="" loading="lazy" decoding="async" />' +
           "</button>";
       }
       strip.innerHTML = html;
       strip.hidden = false;
-      observeThumbs();
+      bindThumbScroll();
+      loadVisibleThumbs();
       scrollStripToActive();
     }
     function updatePhotoStripActive() {
@@ -3134,40 +3208,42 @@
           "<small>" + esc(p.date || "") + " · " + (currentPhotoIdx + 1) + " of " + currentPhotos.length + "</small>" +
         "</div>";
 
-      // Show the small thumbnail straight away; the full photo follows.
-      if (!thumbOf(p) && p.thumb) {
-        getPhotoFileText(p, "thumb").then(function (text) {
-          return decryptWithKey(p.key, JSON.parse(text));
-        }).then(function (dataUrl) {
-          thumbCache[p.id] = dataUrl;
-          if (token !== photoRenderToken) return;
-          var el = document.querySelector("#photoContainer .photo-img");
-          if (el) { el.src = dataUrl; el.classList.add("is-loaded"); }
-        }).catch(function () {});
+      var imgEl = document.querySelector("#photoContainer .photo-img");
+      var fullShown = false;
+
+      // Show the small thumbnail straight away; the full photo follows. The
+      // thumbnail must never land after the full photo: a cached full image
+      // resolves instantly, and a late thumb would replace it with a blurry
+      // 160px copy until the card re-rendered.
+      if (imgEl && !thumbOf(p) && p.thumb) {
+        loadThumbFor(p).then(function (dataUrl) {
+          if (!dataUrl || fullShown || token !== photoRenderToken || !imgEl) return;
+          imgEl.src = dataUrl;
+          imgEl.classList.add("is-loaded");
+        });
       }
 
       updatePhotoStripActive();
 
       getPhotoImageUrl(p).then(function (src) {
         if (token !== photoRenderToken) return;
-        var el = document.querySelector("#photoContainer .photo-img");
-        if (!el) return;
-        el.src = src;
-        el.classList.add("is-loaded");
+        fullShown = true;
+        if (!imgEl) return;
+        imgEl.src = src;
+        imgEl.classList.add("is-loaded");
         prefetchNeighbour(1);
       }).catch(function () {
         if (token !== photoRenderToken) return;
-        var el = document.querySelector("#photoContainer .photo-img");
-        if (el) el.classList.add("is-loaded");
+        if (imgEl) imgEl.classList.add("is-loaded");
       });
     }
     function prefetchNeighbour(delta) {
       if (currentPhotos.length < 2) return;
       var idx = (currentPhotoIdx + delta + currentPhotos.length) % currentPhotos.length;
       var p = currentPhotos[idx];
-      if (p && !p.img && !photoCache[p.id]) {
-        getPhotoImageUrl(p).catch(function () {});
-      }
+      if (!p) return;
+      if (!thumbOf(p)) queueThumb(p);
+      if (!p.img && !photoCache[p.id]) getPhotoImageUrl(p).catch(function () {});
     }
     function selectPhoto(i) {
       if (!isFinite(i) || i < 0 || i >= currentPhotos.length) return;
@@ -3246,6 +3322,7 @@
           $("admOwner").value = localStorage.getItem("adm_gist_owner") || GIST_OWNER;
           $("admGistIds").value = getGistIds().join("\n");
           $("admUploadTarget").value = localStorage.getItem("adm_active_gist") || "";
+          refreshDeviceLink();
         } else {
           alert("Wrong password");
           history.replaceState(null, "", window.location.pathname);
@@ -3450,11 +3527,42 @@
         manifestCache = {};
         photoCache = {};
         thumbCache = {};
+        thumbFailed = {};
+        refreshDeviceLink();
         await loadFamilyPhotos();
       } catch (err) {
         statusEl.textContent = "Upload failed: " + err.message;
       } finally {
         uploadBtn.disabled = false;
+      }
+    }
+
+    function buildDeviceLink() {
+      var ids = getGistIds();
+      if (!ids.length) return "";
+      return window.location.origin + window.location.pathname +
+        "?photos=" + encodeURIComponent(ids.join(",")) +
+        "&owner=" + encodeURIComponent(gistOwner());
+    }
+    function refreshDeviceLink() {
+      var el = $("admDeviceLink");
+      if (!el) return;
+      el.value = buildDeviceLink();
+    }
+    function copyDeviceLink() {
+      var el = $("admDeviceLink");
+      if (!el || !el.value) return;
+      el.select();
+      try { el.setSelectionRange(0, 99999); } catch (e) {}
+      var done = function () {
+        $("admStatus").textContent = "Device link copied — open it once on the tablet or laptop.";
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(el.value).then(done, function () {
+          try { document.execCommand("copy"); done(); } catch (e) {}
+        });
+      } else {
+        try { document.execCommand("copy"); done(); } catch (e) {}
       }
     }
 
@@ -3471,8 +3579,9 @@
         statusEl.textContent = "Creating a new secret gist…";
         var fresh = await createPhotoGist(token, pass);
         $("admGistIds").value = getGistIds().join("\n");
+        refreshDeviceLink();
         statusEl.textContent = "Archive created: " + fresh.gist +
-          " — paste this ID into DEFAULT_GIST_IDS in index.html so every device can find it.";
+          " — copy the device link above and open it once on every other device.";
       } catch (err) {
         statusEl.textContent = "Could not create the gist: " + err.message;
       }
@@ -3507,6 +3616,7 @@
       refreshNews(false);
     });
 
+    applyDeviceLink();
     checkAdminHash();
     applySky();
     updateClockAndGreeting();
