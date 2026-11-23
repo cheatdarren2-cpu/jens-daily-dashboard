@@ -2163,6 +2163,8 @@
       btswire: { label: "Soompi", url: "https://www.soompi.com/tag/bts/feed", color: "var(--accent)", count: 50 },
       yonhap: { label: "Yonhap", url: "https://en.yna.co.kr/RSS/news.xml", color: "var(--accent)" },
       ibtimes: { label: "IBTimes SG", url: "https://www.ibtimes.sg/rss/entertainment", color: "var(--accent)" },
+      bing: { label: "BTS Wire", url: "https://www.bing.com/news/search?q=BTS&format=RSS", color: "var(--accent)", count: 30, unwrap: "bing" },
+      bingmembers: { label: "BTS Wire", url: "https://www.bing.com/news/search?q=BTS+members&format=RSS", color: "var(--accent)", count: 20, unwrap: "bing" },
       mothership: { label: "Mothership", url: "https://mothership.sg/feed/", color: "var(--warm)" },
       cna: { label: "CNA", url: "https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml&category=10416", color: "var(--warm)" },
       dramapanda: { label: "DramaPanda", url: "https://dramapanda.com/feed", color: "var(--warm)" }
@@ -2286,9 +2288,7 @@
     function hydrateNews(cached) {
       if (!cached || !cached.lists) return;
       var lists = Object.assign({ malaysia: [], bts: [], kdrama: [], cdrama: [], sg: [] }, cached.lists);
-      lists.bts = (lists.bts || []).filter(function (it) {
-        return it.source !== "Soompi" || isBtsWireItem(it);
-      });
+      lists.bts = (lists.bts || []).filter(function (it) { return isBtsStory(it); });
       newsState.lists = lists;
       newsState.updatedAt = cached.updatedAt || 0;
       renderAllNews();
@@ -2372,11 +2372,22 @@
           throw err;
         });
     }
+    // Bing's news RSS wraps every story in an apiclick redirect; pull the real
+    // article URL back out so links and previews point at the publisher.
+    function unwrapBingLink(link) {
+      var m = /[?&]url=([^&]+)/.exec(link || "");
+      if (!m) return link;
+      try { return decodeURIComponent(m[1]); } catch (e) { return link; }
+    }
     function fetchFeedFresh(def) {
       return fetchText(NEWS_PROXY + encodeURIComponent(def.url)).then(function (text) {
         var items = parseFeedXml(text);
         if (!items.length) throw new Error("empty feed");
-        return items.map(function (it) { return normalizeItem(it, def.label); });
+        var out = items.map(function (it) { return normalizeItem(it, def.label); });
+        if (def.unwrap === "bing") {
+          out.forEach(function (it) { it.link = unwrapBingLink(it.link); });
+        }
+        return out;
       });
     }
     function fetchFeedConverted(def) {
@@ -2417,32 +2428,59 @@
 
     // Soompi publishes few BTS-only stories between comebacks, so its BTS tag can
     // go weeks without a headline while the awards, chart and member news land
-    // on the wire services. Blend Soompi with Yonhap and IBTimes, newest first.
+    // on the wire services. Blend Soompi, Yonhap, IBTimes and Bing's BTS news
+    // feed, newest first, and keep the ten most recent stories.
+    function isBtsNoise(it) {
+      var t = it.title || "";
+      if (/rumou?r|dating|married|wedding|divorce|gossip/i.test(t)) return true;
+      if (/brand reputation|top circle|weekly charts?|monthly and weekly|sweep top spots|billboard|announces? nominees|goosebumps|dance style/i.test(t)) return true;
+      return false;
+    }
     function isBtsStory(it) {
-      var title = it.title || "";
+      var title = (it.title || "").trim();
       var m = /\bBTS\b|jung ?kook|jimin|taehyung|\bsuga\b|yoongi|namjoon|seokjin|j-?hope|hoseok|bangtan|hybe|big hit/i.exec(title);
       if (!m) return false;
-      if (/rumou?r|dating|married|wedding|divorce|gossip/i.test(title)) return false;
+      if (isBtsNoise(it)) return false;
       // Reject headlines that only mention BTS in passing at the very end.
       return m.index <= Math.max(24, title.length * 0.4);
     }
     function mergeBts(fresh) {
+      var now = Date.now();
       var groups = [
-        (fresh.btswire || []).filter(isBtsWireItem).slice(0, 4),
-        (fresh.yonhap || []).filter(isBtsStory).slice(0, 3),
-        (fresh.ibtimes || []).filter(isBtsStory).slice(0, 3)
+        (fresh.btswire || []).slice(0, 60),
+        (fresh.yonhap || []).slice(0, 30),
+        (fresh.ibtimes || []).slice(0, 20),
+        (fresh.bing || []).slice(0, 20),
+        (fresh.bingmembers || []).slice(0, 20)
       ];
-      var out = [], seen = {};
+      var out = [], seen = {}, seenLink = {};
       groups.forEach(function (list) {
         list.forEach(function (it) {
-          var key = String(it.title || "").toLowerCase().replace(/^\(lead\)\s*/, "").slice(0, 60);
+          if (!isBtsStory(it)) return;
+          // Bing's index also carries older features; keep the card about this month.
+          if (!it.at || now - it.at > 45 * 864e5) return;
+          var key = String(it.title || "").toLowerCase()
+            .replace(/^\s*\(lead\)\s*/, "").replace(/[^a-z0-9]+/g, " ").trim().slice(0, 70);
           if (!key || seen[key]) return;
+          var link = String(it.link || "").replace(/[?#].*$/, "");
+          if (link && seenLink[link]) return;
           seen[key] = 1;
+          if (link) seenLink[link] = 1;
           out.push(it);
         });
       });
       out.sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
-      return out.slice(0, 5);
+      // Ten outlets covering one awards night is not ten stories: keep three
+      // takes on the same event, then backfill with the other headlines.
+      var picked = [], mama = 0;
+      for (var i = 0; i < out.length && picked.length < 10; i++) {
+        if (/MAMA/i.test(out[i].title || "")) {
+          if (mama >= 3) continue;
+          mama++;
+        }
+        picked.push(out[i]);
+      }
+      return picked.sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
     }
     function isCelebNoise(it) {
       var t = ((it.title || "") + " " + (it.summary || "")).toLowerCase();
@@ -2480,7 +2518,7 @@
       };
       var malaysia = mergeMalaysia([fresh.malaymail, fresh.malaysiakini, fresh.worldofbuzz]);
       if (malaysia.length) lists.malaysia = malaysia;
-      if (fresh.btswire || fresh.yonhap || fresh.ibtimes) {
+      if (fresh.btswire || fresh.yonhap || fresh.ibtimes || fresh.bing || fresh.bingmembers) {
         var bts = mergeBts(fresh);
         if (bts.length) lists.bts = bts;
       }
@@ -2519,7 +2557,9 @@
         ["dramapanda", FEEDS.dramapanda],
         ["btswire", FEEDS.btswire],
         ["yonhap", FEEDS.yonhap],
-        ["ibtimes", FEEDS.ibtimes]
+        ["ibtimes", FEEDS.ibtimes],
+        ["bing", FEEDS.bing],
+        ["bingmembers", FEEDS.bingmembers]
       ];
       Promise.allSettled(sources.map(function (s) { return fetchFeed(s[1]); })).then(function (results) {
         if (reqId !== newsRequestId) return;
@@ -3042,8 +3082,11 @@
     var currentPhotoIdx = 0;
     var carouselTimer = null;
     var photoRenderToken = 0;
-    var photoCache = {};      // photo id -> decrypted full data URL
+    var photoCache = {};      // photo id -> decrypted full data URL (LRU, 48 photos)
+    var photoOrder = [];
     var thumbCache = {};      // photo id -> decrypted thumbnail data URL
+    var thumbTextCache = {};  // gist:thumbFile -> encrypted thumbnail text (kept on disk)
+    var THUMB_DB = "mom_thumbs_v1", THUMB_STORE = "thumbText";
     var keyCache = {};        // salt|passphrase -> CryptoKey
     var manifestCache = {};   // gist id -> { salt, key, photos, next }
     var TRANSPARENT_PX = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
@@ -3339,10 +3382,30 @@
 
       allPhotos.sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
       currentPhotos = allPhotos;
+      await primeThumbCache(allPhotos);
       currentPhotoIdx = initialPhotoIndex();
       renderPhotoStrip();
       renderCurrentPhoto();
       startCarouselTimer();
+      prefetchAllThumbs();
+    }
+    // Warms the encrypted-thumbnail cache in the background (6 at a time) so the
+    // first visit is the only one that waits on the Gist CDN.
+    function prefetchAllThumbs() {
+      if (!currentPhotos.length) return;
+      var i = 0;
+      function next() {
+        var batch = [];
+        while (i < currentPhotos.length && batch.length < 6) {
+          var p = currentPhotos[i++];
+          if (p && !p.img && !thumbCache[p.id] && !thumbFailed[p.id]) batch.push(loadThumbFor(p));
+        }
+        if (!batch.length) return;
+        Promise.all(batch).then(function () {
+          if (i < currentPhotos.length) setTimeout(next, 60);
+        });
+      }
+      setTimeout(next, 500);
     }
 
     /* ---------- thumbnails + full images ---------- */
@@ -3365,13 +3428,94 @@
       if (!p.caption && payload.caption) p.caption = payload.caption;
       if (!p.date && payload.date) p.date = payload.date;
       photoCache[p.id] = payload.img;
+      photoOrder.push(p.id);
+      // Full photos are ~250KB each; a few hundred of them would bloat memory
+      // and slow the whole page, so keep only the recent handful decoded.
+      while (photoOrder.length > 48) {
+        var old = photoOrder.shift();
+        if (old !== p.id) delete photoCache[old];
+      }
       return payload.img;
+    }
+
+    /* ---------- thumbnail disk cache ---------- */
+    // Gist thumbnails never change, so the encrypted thumbnail files are kept
+    // in IndexedDB. They stay encrypted at rest (no decrypted photo is written
+    // to disk) and a second visit paints the archive without any downloads.
+    var thumbDbPromise = null;
+    function thumbDb() {
+      if (thumbDbPromise) return thumbDbPromise;
+      thumbDbPromise = new Promise(function (resolve) {
+        try {
+          if (!window.indexedDB) return resolve(null);
+          var req = indexedDB.open(THUMB_DB, 1);
+          req.onupgradeneeded = function () {
+            if (!req.result.objectStoreNames.contains(THUMB_STORE)) req.result.createObjectStore(THUMB_STORE);
+          };
+          req.onsuccess = function () { resolve(req.result); };
+          req.onerror = function () { resolve(null); };
+        } catch (e) { resolve(null); }
+      });
+      return thumbDbPromise;
+    }
+    function thumbTextKey(p) { return (p.gist || "") + ":" + (p.thumb || ""); }
+    function idbAllThumbText() {
+      return thumbDb().then(function (db) {
+        if (!db) return {};
+        return new Promise(function (resolve) {
+          var out = {};
+          try {
+            var req = db.transaction(THUMB_STORE, "readonly").objectStore(THUMB_STORE).openCursor();
+            req.onsuccess = function () {
+              var cur = req.result;
+              if (!cur) return resolve(out);
+              out[cur.key] = cur.value;
+              cur.continue();
+            };
+            req.onerror = function () { resolve(out); };
+          } catch (e) { resolve(out); }
+        });
+      });
+    }
+    function idbPutThumbText(key, value) {
+      thumbDb().then(function (db) {
+        if (!db) return;
+        try {
+          db.transaction(THUMB_STORE, "readwrite").objectStore(THUMB_STORE).put(value, key);
+        } catch (e) { /* storage full or blocked: the network path still works */ }
+      }).catch(function () {});
+    }
+    function clearThumbTextDb() {
+      thumbDb().then(function (db) {
+        if (!db) return;
+        try { db.transaction(THUMB_STORE, "readwrite").objectStore(THUMB_STORE).clear(); } catch (e) {}
+      }).catch(function () {});
+    }
+    async function primeThumbCache(photos) {
+      var map = await idbAllThumbText();
+      var jobs = [];
+      for (var i = 0; i < photos.length; i++) {
+        var p = photos[i];
+        if (!p.thumb) continue;
+        var cached = map[thumbTextKey(p)];
+        if (!cached || thumbCache[p.id]) continue;
+        thumbTextCache[thumbTextKey(p)] = cached;
+        jobs.push((function (photo, text) {
+          return decryptWithKey(photo.key, JSON.parse(text)).then(function (url) {
+            thumbCache[photo.id] = url;
+          }).catch(function () { delete thumbTextCache[thumbTextKey(photo)]; });
+        })(p, cached));
+      }
+      // Decrypt in small batches so a 300-photo archive does not freeze the page.
+      for (var j = 0; j < jobs.length; j += 24) {
+        await Promise.all(jobs.slice(j, j + 24));
+      }
     }
     // Every thumbnail is its own encrypted gist file, so they go through a
     // small queue (3 at a time) and are painted by photo id — not by element
     // reference, which is lost whenever the filmstrip re-renders.
     var thumbQueue = [], thumbActive = 0, thumbInFlight = {}, thumbFailed = {};
-    var THUMB_CONCURRENCY = 3;
+    var THUMB_CONCURRENCY = 6;
     var thumbScrollRaf = 0;
     var thumbScrollBound = false;
 
@@ -3392,7 +3536,15 @@
       if (p.img) return Promise.resolve(p.img);
       if (thumbCache[p.id]) return Promise.resolve(thumbCache[p.id]);
       if (thumbInFlight[p.id]) return thumbInFlight[p.id];
-      var job = getPhotoFileText(p, "thumb").then(function (text) {
+      var cacheKey = thumbTextKey(p);
+      var textJob = thumbTextCache[cacheKey]
+        ? Promise.resolve(thumbTextCache[cacheKey])
+        : getPhotoFileText(p, "thumb").then(function (text) {
+            thumbTextCache[cacheKey] = text;
+            idbPutThumbText(cacheKey, text);
+            return text;
+          });
+      var job = textJob.then(function (text) {
         return decryptWithKey(p.key, JSON.parse(text));
       }).then(function (dataUrl) {
         thumbCache[p.id] = dataUrl;
@@ -3637,7 +3789,10 @@
       currentPhotos = [];
       if (albumOpen) closeAlbum();
       photoCache = {};
+      photoOrder = [];
       thumbCache = {};
+      thumbTextCache = {};
+      clearThumbTextDb();
       manifestCache = {};
       if (carouselTimer) clearInterval(carouselTimer);
       $("photoStrip").hidden = true;
@@ -3656,6 +3811,24 @@
     // FAMILY ALBUM (full-screen grid + viewer)
     // =========================================================
     var albumOpen = false, albumIndex = 0, albumView = "grid", albumRenderToken = 0, albumTouchX = 0;
+    var albumObserver = null;
+    // Only the tiles on screen fetch their thumbnail, so opening the album on a
+    // 300-photo archive starts a handful of downloads instead of 300.
+    function observeAlbumTiles(body) {
+      if (!("IntersectionObserver" in window)) return false;
+      if (albumObserver) albumObserver.disconnect();
+      albumObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          albumObserver.unobserve(entry.target);
+          var p = currentPhotos[parseInt(entry.target.getAttribute("data-album-i"), 10)];
+          if (p) queueThumb(p);
+        });
+      }, { root: body, rootMargin: "400px 0px" });
+      var tiles = body.querySelectorAll(".album-tile");
+      for (var i = 0; i < tiles.length; i++) albumObserver.observe(tiles[i]);
+      return true;
+    }
 
     function albumPaintThumb(p) {
       if (!albumOpen || !thumbCache[p.id]) return;
@@ -3725,10 +3898,15 @@
             '<img src="' + (t || TRANSPARENT_PX) + '" ' +
             (t ? 'class="is-loaded"' : 'data-album-id="' + esc(p.id) + '"') +
             ' alt="" loading="lazy" decoding="async" /></button>';
-          if (!t) queueThumb(p);
         }
         body.innerHTML = html + "</div>";
         body.scrollTop = 0;
+        var observed = observeAlbumTiles(body);
+        if (!observed) {
+          for (var k = 0; k < currentPhotos.length; k++) {
+            if (!thumbOf(currentPhotos[k])) queueThumb(currentPhotos[k]);
+          }
+        }
         return;
       }
       var item = currentPhotos[albumIndex];
