@@ -2161,7 +2161,10 @@
       worldofbuzz: { label: "World of Buzz", url: "https://worldofbuzz.com/feed/", color: "var(--rose)" },
       soompi: { label: "Soompi", url: "https://www.soompi.com/feed", color: "var(--accent)" },
       btswire: { label: "Soompi", url: "https://www.soompi.com/tag/bts/feed", color: "var(--accent)", count: 50 },
+      yonhap: { label: "Yonhap", url: "https://en.yna.co.kr/RSS/news.xml", color: "var(--accent)" },
+      ibtimes: { label: "IBTimes SG", url: "https://www.ibtimes.sg/rss/entertainment", color: "var(--accent)" },
       mothership: { label: "Mothership", url: "https://mothership.sg/feed/", color: "var(--warm)" },
+      cna: { label: "CNA", url: "https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml&category=10416", color: "var(--warm)" },
       dramapanda: { label: "DramaPanda", url: "https://dramapanda.com/feed", color: "var(--warm)" }
     };
 
@@ -2283,14 +2286,100 @@
     function hydrateNews(cached) {
       if (!cached || !cached.lists) return;
       var lists = Object.assign({ malaysia: [], bts: [], kdrama: [], cdrama: [], sg: [] }, cached.lists);
-      lists.bts = (lists.bts || []).filter(isBtsWireItem);
+      lists.bts = (lists.bts || []).filter(function (it) {
+        return it.source !== "Soompi" || isBtsWireItem(it);
+      });
       newsState.lists = lists;
       newsState.updatedAt = cached.updatedAt || 0;
       renderAllNews();
       setStatus("Showing saved briefing · " + (newsState.updatedAt ? "synced " + timeLabel(new Date(newsState.updatedAt)) : "offline copy"), "ok");
     }
 
-    function fetchFeed(def) {
+    // rss2json's free plan re-reads a feed only once an hour and returns at most
+    // 10 items, so cards could sit a day (or weeks) behind while the browser was
+    // online. Read the feeds themselves through a CORS-enabled reader on every
+    // refresh and keep rss2json as the fallback if that reader is unreachable.
+    var NEWS_PROXY = "https://proxy.cors.dev/?url=";
+
+    function tagText(node, names) {
+      for (var i = 0; i < names.length; i++) {
+        var el = node.getElementsByTagName(names[i])[0];
+        if (el) {
+          var text = (el.textContent || "").trim();
+          if (text) return text;
+        }
+      }
+      return "";
+    }
+    function tagAttr(node, names, attr) {
+      for (var i = 0; i < names.length; i++) {
+        var el = node.getElementsByTagName(names[i])[0];
+        if (el) {
+          var value = el.getAttribute(attr) || "";
+          if (value) return value;
+        }
+      }
+      return "";
+    }
+    // A few feeds ship bare ampersands, which strict XML parsers reject. Escape
+    // them outside CDATA and try once more before giving up on the feed.
+    function repairXml(text) {
+      var parts = String(text).split(/(<!\[CDATA\[[\s\S]*?\]\]\>)/);
+      return parts.map(function (part) {
+        if (part.slice(0, 9) === "<![CDATA[") return part;
+        return part
+          .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
+          .replace(/&(?!#\d+;|#x[0-9a-fA-F]+;|[a-zA-Z][a-zA-Z0-9]*;)/g, "&amp;");
+      }).join("");
+    }
+    function parseFeedXml(text) {
+      var items = parseFeedXmlStrict(text);
+      if (!items.length) items = parseFeedXmlStrict(repairXml(text));
+      return items;
+    }
+    function parseFeedXmlStrict(text) {
+      var doc = new DOMParser().parseFromString(text, "text/xml");
+      if (!doc || doc.getElementsByTagName("parsererror").length) return [];
+      var nodes = doc.getElementsByTagName("item");
+      if (!nodes.length) nodes = doc.getElementsByTagName("entry");
+      var out = [];
+      for (var i = 0; i < nodes.length; i++) {
+        var node = nodes[i];
+        var linkEl = node.getElementsByTagName("link")[0];
+        var link = linkEl ? ((linkEl.textContent || "").trim() || linkEl.getAttribute("href") || "") : "";
+        out.push({
+          title: tagText(node, ["title"]),
+          link: link,
+          pubDate: tagText(node, ["pubDate", "published", "updated", "dc:date"]),
+          description: tagText(node, ["content:encoded", "content", "description", "summary"]),
+          thumbnail: tagAttr(node, ["media:content", "media:thumbnail", "enclosure"], "url"),
+          guid: tagText(node, ["guid", "id"])
+        });
+      }
+      return out;
+    }
+    function fetchText(url, ms) {
+      var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+      var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, ms || 12000) : 0;
+      return fetch(url, { cache: "no-store", signal: ctrl ? ctrl.signal : undefined })
+        .then(function (r) {
+          if (timer) clearTimeout(timer);
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.text();
+        })
+        .catch(function (err) {
+          if (timer) clearTimeout(timer);
+          throw err;
+        });
+    }
+    function fetchFeedFresh(def) {
+      return fetchText(NEWS_PROXY + encodeURIComponent(def.url)).then(function (text) {
+        var items = parseFeedXml(text);
+        if (!items.length) throw new Error("empty feed");
+        return items.map(function (it) { return normalizeItem(it, def.label); });
+      });
+    }
+    function fetchFeedConverted(def) {
       var api = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(def.url) +
         "&count=" + (def.count || 20) + "&_=" + Date.now();
       return fetch(api, { cache: "no-store" })
@@ -2301,6 +2390,9 @@
           }
           return data.items.map(function (it) { return normalizeItem(it, def.label); });
         });
+    }
+    function fetchFeed(def) {
+      return fetchFeedFresh(def).catch(function () { return fetchFeedConverted(def); });
     }
 
     // Malay Mail's feed is frequently unreachable from feed converters, which
@@ -2323,6 +2415,61 @@
       return out.slice(0, 7);
     }
 
+    // Soompi publishes few BTS-only stories between comebacks, so its BTS tag can
+    // go weeks without a headline while the awards, chart and member news land
+    // on the wire services. Blend Soompi with Yonhap and IBTimes, newest first.
+    function isBtsStory(it) {
+      var title = it.title || "";
+      var m = /\bBTS\b|jung ?kook|jimin|taehyung|\bsuga\b|yoongi|namjoon|seokjin|j-?hope|hoseok|bangtan|hybe|big hit/i.exec(title);
+      if (!m) return false;
+      if (/rumou?r|dating|married|wedding|divorce|gossip/i.test(title)) return false;
+      // Reject headlines that only mention BTS in passing at the very end.
+      return m.index <= Math.max(24, title.length * 0.4);
+    }
+    function mergeBts(fresh) {
+      var groups = [
+        (fresh.btswire || []).filter(isBtsWireItem).slice(0, 4),
+        (fresh.yonhap || []).filter(isBtsStory).slice(0, 3),
+        (fresh.ibtimes || []).filter(isBtsStory).slice(0, 3)
+      ];
+      var out = [], seen = {};
+      groups.forEach(function (list) {
+        list.forEach(function (it) {
+          var key = String(it.title || "").toLowerCase().replace(/^\(lead\)\s*/, "").slice(0, 60);
+          if (!key || seen[key]) return;
+          seen[key] = 1;
+          out.push(it);
+        });
+      });
+      out.sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
+      return out.slice(0, 5);
+    }
+    function isCelebNoise(it) {
+      var t = ((it.title || "") + " " + (it.summary || "")).toLowerCase();
+      if (/celebrity|dating|relationship drama|influencer|tiktok|scandal|exposed|spotted|dating rumor/.test(t)) return true;
+      if (/looks like|netizens react|this photo|this video/.test(t) && t.length < 60) return true;
+      return false;
+    }
+    // Mothership's cached copy lagged behind on some devices, so Singapore now
+    // blends Mothership and CNA and takes whichever headline is newest.
+    function mergeSg(fresh) {
+      var sources = [[fresh.mothership, 4], [fresh.cna, 4]];
+      var out = [], seen = {};
+      sources.forEach(function (pair) {
+        var list = pair[0] || [];
+        for (var i = 0; i < list.length && i < pair[1]; i++) {
+          var it = list[i];
+          if (isCelebNoise(it)) continue;
+          var key = String(it.title || "").toLowerCase().slice(0, 60);
+          if (!key || seen[key]) continue;
+          seen[key] = 1;
+          out.push(it);
+        }
+      });
+      out.sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
+      return out.slice(0, 6);
+    }
+
     function applyFreshNews(fresh, previous) {
       var lists = {
         malaysia: previous.malaysia || [],
@@ -2333,22 +2480,17 @@
       };
       var malaysia = mergeMalaysia([fresh.malaymail, fresh.malaysiakini, fresh.worldofbuzz]);
       if (malaysia.length) lists.malaysia = malaysia;
-      if (fresh.btswire) {
-        var bts = fresh.btswire.filter(isBtsWireItem).slice(0, 5);
+      if (fresh.btswire || fresh.yonhap || fresh.ibtimes) {
+        var bts = mergeBts(fresh);
         if (bts.length) lists.bts = bts;
       }
       if (fresh.soompi) {
         var kd = fresh.soompi.filter(isDramaItem).slice(0, 6);
         lists.kdrama = kd.length ? kd : fresh.soompi.slice(0, 6);
       }
-      if (fresh.mothership) {
-        var sg = fresh.mothership.filter(function (it) {
-          var t = ((it.title || "") + " " + (it.summary || "")).toLowerCase();
-          if (/celebrity|dating|relationship drama|influencer|tiktok|scandal|exposed|spotted|dating rumor/.test(t)) return false;
-          if (/looks like|netizens react|this photo|this video/.test(t) && t.length < 60) return false;
-          return true;
-        });
-        lists.sg = (sg.length ? sg : fresh.mothership).slice(0, 6);
+      if (fresh.mothership || fresh.cna) {
+        var sg = mergeSg(fresh);
+        if (sg.length) lists.sg = sg;
       }
       if (fresh.dramapanda) lists.cdrama = fresh.dramapanda.slice(0, 6);
       newsState.lists = lists;
@@ -2373,8 +2515,11 @@
         ["worldofbuzz", FEEDS.worldofbuzz],
         ["soompi", FEEDS.soompi],
         ["mothership", FEEDS.mothership],
+        ["cna", FEEDS.cna],
         ["dramapanda", FEEDS.dramapanda],
-        ["btswire", FEEDS.btswire]
+        ["btswire", FEEDS.btswire],
+        ["yonhap", FEEDS.yonhap],
+        ["ibtimes", FEEDS.ibtimes]
       ];
       Promise.allSettled(sources.map(function (s) { return fetchFeed(s[1]); })).then(function (results) {
         if (reqId !== newsRequestId) return;
