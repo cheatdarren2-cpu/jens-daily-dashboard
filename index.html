@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="color-scheme" content="light dark" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <title>Daily Briefing</title>
@@ -15,98 +16,110 @@
       --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
       --radius: 22px;
       --radius-sm: 14px;
-      --gold: #b08a52;
-      --cloud: #8d94a3;
-      --blue: #5b86a8;
+      --gold: #e0a63c;
+      --cloud: #8fa6bc;
+      --blue: #2f88c9;
       --ease: cubic-bezier(0.22, 0.9, 0.26, 1);
-      --accent: #9a7b48;
-      --accent-soft: rgba(154, 123, 72, 0.12);
-      --rose: #b45f6a;
-      --teal: #5c8a7b;
-      --warm: #b07d3f;
-      --bg-a: #f7f3ea;
-      --bg-b: #efe9dc;
-      --bg-c: #e7ece5;
-      --text: #23241f;
-      --muted: #6f7168;
-      --surface: rgba(255, 255, 255, 0.66);
-      --surface-2: rgba(255, 255, 255, 0.4);
-      --line: rgba(35, 36, 31, 0.1);
-      --card-hi: rgba(255, 255, 255, 0.9);
-      --shadow-color: rgba(60, 50, 35, 0.2);
-      --orb-1: rgba(255, 222, 186, 0.75);
-      --orb-2: rgba(196, 219, 208, 0.7);
-      --orb-3: rgba(238, 224, 198, 0.8);
+      --accent: #0d7c8c;
+      --accent-soft: rgba(13, 124, 140, 0.12);
+      --rose: #d1566a;
+      --teal: #0f8f74;
+      --warm: #d9812f;
+      --bg-a: #eef7ff;
+      --bg-b: #e8f6f1;
+      --bg-c: #fbf6ea;
+      --text: #10202c;
+      --muted: #5c6f80;
+      --surface: rgba(255, 255, 255, 0.82);
+      --surface-2: rgba(255, 255, 255, 0.55);
+      --line: rgba(16, 32, 44, 0.11);
+      --card-hi: rgba(255, 255, 255, 0.95);
+      --shadow-color: rgba(20, 60, 90, 0.2);
+      --orb-1: rgba(120, 196, 255, 0.5);
+      --orb-2: rgba(120, 226, 190, 0.42);
+      --orb-3: rgba(255, 206, 138, 0.42);
+      --wi-sun: #f0a832;
+      --wi-cloud: #7c93a8;
+      --wi-blue: #2f88c9;
     }
 
     body[data-sky="dawn"] {
-      --bg-a: #fdf3ea;
-      --bg-b: #f6e2dd;
-      --bg-c: #ece7f1;
-      --text: #2b2422;
-      --muted: #7c6d68;
-      --surface: rgba(255, 252, 249, 0.7);
-      --surface-2: rgba(255, 249, 245, 0.42);
-      --line: rgba(80, 55, 50, 0.11);
-      --accent: #b5745e;
-      --accent-soft: rgba(181, 116, 94, 0.13);
-      --rose: #b45f6a;
-      --teal: #6b8a7d;
-      --warm: #b9824a;
-      --gold: #c69463;
-      --cloud: #9a8d90;
-      --blue: #6b8aa8;
-      --orb-1: rgba(255, 210, 175, 0.8);
-      --orb-2: rgba(226, 200, 224, 0.7);
-      --orb-3: rgba(255, 236, 214, 0.8);
-      --shadow-color: rgba(90, 60, 50, 0.22);
+      --bg-a: #fff6ee;
+      --bg-b: #ffe9df;
+      --bg-c: #f2e9fb;
+      --text: #2a1f26;
+      --muted: #746270;
+      --surface: rgba(255, 252, 250, 0.84);
+      --surface-2: rgba(255, 246, 242, 0.58);
+      --line: rgba(80, 50, 60, 0.12);
+      --accent: #c2614f;
+      --accent-soft: rgba(194, 97, 79, 0.13);
+      --rose: #cc5b6d;
+      --teal: #2f8f7c;
+      --warm: #d9853c;
+      --gold: #e3a44f;
+      --cloud: #9b8f9c;
+      --blue: #3f83bd;
+      --orb-1: rgba(255, 188, 148, 0.62);
+      --orb-2: rgba(210, 184, 246, 0.5);
+      --orb-3: rgba(255, 224, 166, 0.55);
+      --shadow-color: rgba(90, 55, 60, 0.2);
+      --wi-sun: #e8a04a;
+      --wi-cloud: #8a7d90;
+      --wi-blue: #4a7fb5;
     }
 
     body[data-sky="dusk"] {
-      --bg-a: #f7e8dd;
-      --bg-b: #edd9d4;
-      --bg-c: #dcd9e8;
-      --text: #2b2524;
-      --muted: #7a6d6c;
-      --surface: rgba(255, 250, 246, 0.66);
-      --surface-2: rgba(255, 246, 241, 0.4);
-      --line: rgba(70, 45, 50, 0.12);
-      --accent: #a8703f;
-      --accent-soft: rgba(168, 112, 63, 0.14);
-      --gold: #c08a4d;
-      --rose: #b25c66;
-      --teal: #5f8478;
-      --warm: #b06d3c;
-      --cloud: #948a93;
-      --blue: #5f7fa3;
-      --orb-1: rgba(255, 190, 150, 0.75);
-      --orb-2: rgba(198, 178, 220, 0.65);
-      --orb-3: rgba(240, 208, 190, 0.8);
-      --shadow-color: rgba(75, 45, 55, 0.24);
+      --bg-a: #fff1ea;
+      --bg-b: #fbe0dc;
+      --bg-c: #e9e3f6;
+      --text: #2b1f2a;
+      --muted: #7a6573;
+      --surface: rgba(255, 250, 248, 0.82);
+      --surface-2: rgba(255, 246, 244, 0.55);
+      --line: rgba(70, 42, 55, 0.12);
+      --accent: #b84d63;
+      --accent-soft: rgba(184, 77, 99, 0.13);
+      --gold: #e29a4b;
+      --rose: #c34e66;
+      --teal: #2e8b7b;
+      --warm: #d0763a;
+      --cloud: #92848f;
+      --blue: #4a7fb4;
+      --orb-1: rgba(255, 158, 128, 0.55);
+      --orb-2: rgba(190, 150, 225, 0.45);
+      --orb-3: rgba(255, 200, 160, 0.5);
+      --shadow-color: rgba(75, 42, 60, 0.22);
+      --wi-sun: #e09a4a;
+      --wi-cloud: #85788c;
+      --wi-blue: #4b7fb0;
     }
 
     body[data-sky="night"] {
-      --bg-a: #0c1120;
-      --bg-b: #131a2b;
-      --bg-c: #1a2130;
-      --text: #f1ede4;
-      --muted: #a2a8b6;
-      --surface: rgba(28, 34, 48, 0.64);
-      --surface-2: rgba(23, 28, 41, 0.5);
-      --line: rgba(255, 255, 255, 0.09);
-      --card-hi: rgba(255, 255, 255, 0.06);
-      --accent: #d8b57f;
-      --accent-soft: rgba(216, 181, 127, 0.13);
-      --gold: #e3c48d;
-      --rose: #e39aa3;
-      --teal: #7fc0ad;
-      --warm: #e0b177;
-      --cloud: #7f8798;
-      --blue: #8fb8d8;
-      --orb-1: rgba(56, 72, 110, 0.6);
-      --orb-2: rgba(96, 70, 96, 0.42);
-      --orb-3: rgba(30, 58, 74, 0.55);
-      --shadow-color: rgba(0, 0, 0, 0.6);
+      --bg-a: #0a1524;
+      --bg-b: #0f1e33;
+      --bg-c: #16283f;
+      --text: #eef4fb;
+      --muted: #a9b8cc;
+      --surface: rgba(30, 46, 68, 0.74);
+      --surface-2: rgba(26, 41, 62, 0.56);
+      --line: rgba(255, 255, 255, 0.11);
+      --card-hi: rgba(255, 255, 255, 0.1);
+      --accent: #5fd7c4;
+      --accent-soft: rgba(95, 215, 196, 0.14);
+      --gold: #f0c882;
+      --rose: #f08a9b;
+      --teal: #5fd7c4;
+      --warm: #f0a868;
+      --cloud: #9fb3c9;
+      --blue: #86c9f2;
+      --orb-1: rgba(38, 110, 165, 0.5);
+      --orb-2: rgba(100, 70, 155, 0.38);
+      --orb-3: rgba(20, 122, 112, 0.38);
+      --shadow-color: rgba(0, 0, 0, 0.55);
+      --wi-sun: #f2c777;
+      --wi-cloud: #c6d5e6;
+      --wi-blue: #7cc4f0;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -304,6 +317,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
       gap: 12px;
       margin-bottom: 15px;
     }
@@ -465,10 +479,27 @@
       align-items: center;
       justify-content: center;
     }
-    .photo-box img {
-      width: 100%;
-      max-height: 430px;
+    .photo-box { height: clamp(280px, 44vh, 440px); }
+    /* The whole photo is shown (never cropped) and the blurred copy behind it
+       fills the letterboxed edges instead of leaving empty bars. */
+    .photo-box .photo-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
       object-fit: cover;
+      filter: blur(26px) saturate(1.18) brightness(0.9);
+      transform: scale(1.14);
+      opacity: 0;
+      transition: opacity 0.8s ease;
+      pointer-events: none;
+    }
+    .photo-box .photo-bg.is-loaded { opacity: 0.62; }
+    .photo-box .photo-img {
+      position: relative;
+      z-index: 1;
+      width: 100%; height: 100%;
+      object-fit: contain;
+      object-position: center;
       display: block;
     }
     .photo-box .photo-img { opacity: 0; transition: opacity 0.7s ease; }
@@ -875,7 +906,7 @@
 
     /* ---------- Weather icon animations ---------- */
     .wi { display: block; width: 100%; height: 100%; }
-    .wi svg { display: block; width: 100%; height: 100%; overflow: visible; }
+    .wi svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 2px 5px rgba(10, 22, 36, 0.22)); }
     .wi .wi-rays { transform-origin: 32px 30px; animation: spin 54s linear infinite; transform-box: fill-box; }
     @keyframes wiSpin { to { transform: rotate(360deg); } }
     .wi .wi-rays { animation-name: wiSpin; }
@@ -910,6 +941,101 @@
     @keyframes wiFog {
       from { opacity: 0.45; transform: translateX(-1.5px); }
       to { opacity: 0.9; transform: translateX(1.5px); }
+    }
+
+    /* ---------- Family album viewer ---------- */
+    body.album-open { overflow: hidden; }
+    .album-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      display: none;
+      flex-direction: column;
+      background: rgba(9, 14, 22, 0.74);
+      backdrop-filter: blur(26px) saturate(1.1);
+      -webkit-backdrop-filter: blur(26px) saturate(1.1);
+      color: #fff;
+    }
+    .album-overlay.show { display: flex; animation: fadeIn 0.25s ease both; }
+    .album-head {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 14px; flex-wrap: wrap; padding: 18px 22px 12px;
+    }
+    .album-title { font-family: var(--font-serif); font-size: 24px; letter-spacing: 0.3px; }
+    .album-sub { font-size: 10.5px; letter-spacing: 1.4px; text-transform: uppercase; opacity: 0.68; margin-top: 2px; }
+    .album-head-actions { display: flex; align-items: center; gap: 8px; }
+    .album-switch {
+      display: flex; gap: 2px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 999px; padding: 3px;
+    }
+    .album-switch button {
+      border: none; background: transparent; color: rgba(255, 255, 255, 0.72);
+      font-family: var(--font-sans); font-size: 11.5px; padding: 6px 13px;
+      border-radius: 999px; cursor: pointer; transition: background 0.2s, color 0.2s;
+    }
+    .album-switch button.active { background: rgba(255, 255, 255, 0.94); color: #13202c; }
+    .album-close {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.08); color: #fff;
+      font-size: 19px; line-height: 1; cursor: pointer;
+    }
+    .album-close:hover { background: rgba(255, 255, 255, 0.18); }
+    .album-body { flex: 1; min-height: 0; overflow-y: auto; padding: 6px 20px 26px; }
+    .album-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+      gap: 10px;
+    }
+    .album-tile {
+      position: relative; padding: 0; border: none; border-radius: 12px;
+      overflow: hidden; cursor: pointer; aspect-ratio: 1;
+      background: rgba(255, 255, 255, 0.07);
+    }
+    .album-tile img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+      opacity: 0; transition: transform 0.45s var(--ease), opacity 0.4s ease;
+    }
+    .album-tile img.is-loaded { opacity: 1; }
+    .album-tile:hover img { transform: scale(1.06); }
+    .album-tile.is-current { outline: 2px solid var(--accent); outline-offset: -2px; }
+    .album-stage { position: relative; height: 100%; min-height: 300px; display: flex; align-items: center; justify-content: center; }
+    .album-stage .album-bg {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; filter: blur(34px) saturate(1.2) brightness(0.62);
+      transform: scale(1.1); opacity: 0.85; pointer-events: none;
+    }
+    .album-stage img.album-main {
+      position: relative; z-index: 1;
+      max-width: 100%; max-height: calc(100vh - 220px);
+      width: auto; height: auto; object-fit: contain;
+      border-radius: 10px; opacity: 0; transition: opacity 0.5s ease;
+      box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.8);
+    }
+    .album-stage img.album-main.is-loaded { opacity: 1; }
+    .album-meta { display: flex; justify-content: space-between; align-items: flex-end; gap: 14px; margin-top: 12px; font-size: 13px; }
+    .album-meta small { display: block; opacity: 0.66; font-size: 10.5px; letter-spacing: 0.8px; margin-top: 3px; }
+    .album-counter { font-variant-numeric: tabular-nums; opacity: 0.7; letter-spacing: 1px; font-size: 11px; white-space: nowrap; }
+    .album-nav {
+      position: absolute; top: 50%; transform: translateY(-50%); z-index: 3;
+      width: 42px; height: 42px; border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      background: rgba(12, 18, 26, 0.45); backdrop-filter: blur(8px);
+      color: #fff; font-size: 22px; line-height: 1; cursor: pointer;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .album-nav:hover { background: rgba(12, 18, 26, 0.7); transform: translateY(-50%) scale(1.04); }
+    .album-nav.prev { left: 2px; }
+    .album-nav.next { right: 2px; }
+    .album-empty { text-align: center; opacity: 0.7; padding: 60px 20px; font-size: 13px; }
+    @media (max-width: 640px) {
+      .album-head { padding: 14px 14px 8px; gap: 8px; }
+      .album-title { font-size: 20px; }
+      .album-body { padding: 4px 12px 20px; }
+      .album-grid { grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 7px; }
+      .album-nav { width: 34px; height: 34px; font-size: 18px; }
     }
 
     /* ---------- News modal ---------- */
@@ -1214,13 +1340,13 @@
       .t-slot .t-pop { font-size: 8.5px; }
       .forecast-3d { display: none; }
       .photo-box { flex: 1 1 auto; min-height: 150px; height: auto; }
-      .photo-box img {
+      .photo-box .photo-bg { position: absolute; }
+      .photo-box .photo-img {
         position: absolute;
         inset: 0;
         height: 100%;
         width: 100%;
-        max-height: none;
-        object-fit: cover;
+        object-fit: contain;
       }
       .photo-strip { flex: none; gap: 6px; margin-top: 7px; padding-bottom: 4px; }
       .photo-thumb { width: 38px; height: 38px; border-radius: 8px; }
@@ -1321,7 +1447,7 @@
 
       <details class="adm-adv">
         <summary>Advanced</summary>
-        <p class="adm-hint">Leave the target blank and photos go into the current archive gist; a new gist is started automatically when it is full.</p>
+        <p class="adm-hint">Leave the target blank and photos go into the current archive gist; a new gist is started automatically once a gist holds 120 photos, and every new gist is linked from the previous one.</p>
         <label>Upload into a specific Gist ID (optional)</label>
         <input type="text" id="admUploadTarget" placeholder="Automatic" />
         <label>Archive seed Gist ID(s), one per line</label>
@@ -1389,6 +1515,7 @@
           <div class="card-header">
             <div class="card-title"><span class="dot dot-accent"></span>Family Moments</div>
             <span class="badge-soft" id="photoCount">—</span>
+            <button id="albumBtn" class="icon-btn" style="padding:4px 10px;font-size:10px;" onclick="openAlbum()" title="Open the family album">⤢ Album</button>
             <button id="lockResetBtn" class="icon-btn" style="display:none;padding:4px 10px;font-size:10px;" onclick="forgetPassphrase()">Lock</button>
           </div>
           <div class="photo-box" id="photoContainer"></div>
@@ -1481,6 +1608,24 @@
     </main>
 
     <footer><span class="sync-dot loading" id="syncDot"></span><span id="footerStatus">Preparing your briefing…</span></footer>
+  </div>
+
+  <!-- Family album viewer -->
+  <div class="album-overlay" id="albumOverlay" aria-hidden="true">
+    <div class="album-head">
+      <div>
+        <div class="album-title">Family Album</div>
+        <div class="album-sub" id="albumSub">—</div>
+      </div>
+      <div class="album-head-actions">
+        <div class="album-switch">
+          <button type="button" id="albumTabGrid" class="active" onclick="setAlbumView('grid')">All photos</button>
+          <button type="button" id="albumTabSingle" onclick="setAlbumView('single')">Viewer</button>
+        </div>
+        <button type="button" class="album-close" onclick="closeAlbum()" aria-label="Close album">×</button>
+      </div>
+    </div>
+    <div class="album-body" id="albumBody"></div>
   </div>
 
   <!-- News Modal -->
@@ -1667,11 +1812,21 @@
         return d.toLocaleDateString([], { weekday: "short" });
       } catch (e) { return ""; }
     }
+    // rss2json returns dates as "2026-11-23 03:00:55", which strict Safari
+    // parsers reject, so normalise to ISO before parsing.
+    function feedTime(raw) {
+      if (!raw) return 0;
+      var s = String(raw).trim();
+      if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(s)) s = s.replace(" ", "T");
+      var t = Date.parse(s);
+      return isNaN(t) ? 0 : t;
+    }
     function formatFeedDate(raw) {
-      var d = new Date(raw);
-      if (isNaN(d.getTime())) return "";
+      var t = feedTime(raw);
+      if (!t) return "";
+      var d = new Date(t);
       var now = new Date();
-      if (d.toDateString() === now.toDateString()) return timeLabel(raw);
+      if (d.toDateString() === now.toDateString()) return timeLabel(d.toISOString());
       var hrs = (now - d) / 3600000;
       if (hrs < 26) return "Yesterday";
       return d.toLocaleDateString([], { month: "short", day: "numeric" });
@@ -1687,7 +1842,12 @@
       return "night";
     }
     var SKY_LABEL = { dawn: "Dawn", day: "Daylight", dusk: "Dusk", night: "Night" };
-    var SKY_GREETING = { dawn: "Good morning.", day: "Good morning.", dusk: "Good evening.", night: "Good evening." };
+    function greetingFor(h) {
+      if (h >= 5 && h < 12) return "Good morning.";
+      if (h >= 12 && h < 17) return "Good afternoon.";
+      if (h >= 17 && h < 22) return "Good evening.";
+      return "Good night.";
+    }
 
     function themeMode() {
       var m = localStorage.getItem(THEME_KEY);
@@ -1697,6 +1857,9 @@
       var mode = themeMode();
       var sky = mode === "dark" ? "night" : (mode === "light" ? "day" : skyForHour(new Date().getHours()));
       document.body.setAttribute("data-sky", sky);
+      // Declaring the scheme stops Android/Chrome "forced dark" from inverting
+      // the light themes on tablets (which also washed out the weather icons).
+      document.documentElement.style.colorScheme = sky === "night" ? "dark" : "light";
       var label = $("themeBtnLabel");
       if (label) label.textContent = mode === "auto" ? "Auto" : (mode === "light" ? "Light" : "Dark");
       var skyId = $("skyLabel");
@@ -1726,7 +1889,7 @@
       try { tz = new Intl.DateTimeFormat(undefined, { timeZoneName: "short" }).formatToParts(now).find(function (p) { return p.type === "timeZoneName"; }); } catch (e) {}
       $("clockSub").textContent = (tz && tz.value ? tz.value + " · " : "") + "Local time";
 
-      $("greetingText").textContent = SKY_GREETING[skyForHour(hrs)] || "Hello.";
+      $("greetingText").textContent = greetingFor(hrs);
       $("dateText").textContent = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
       applySky();
     }
@@ -1746,7 +1909,7 @@
     // WEATHER ICONS (inline SVG, animated)
     // =========================================================
     function weatherRays(cx, cy, r1, r2) {
-      var out = '<g class="wi-rays" stroke="var(--gold)" stroke-width="2.2" stroke-linecap="round">';
+      var out = '<g class="wi-rays"       stroke="var(--wi-sun)" stroke-width="2.2" stroke-linecap="round">';
       for (var i = 0; i < 8; i++) {
         var a = (Math.PI / 4) * i;
         var x1 = cx + Math.cos(a) * r1;
@@ -1760,17 +1923,17 @@
     var CLOUD_PATH = "M20 46a11 11 0 0 1-1-21.9A15 15 0 0 1 48 27a9.5 9.5 0 0 1 2 18H20Z";
     function cloudSvg(x, y, scale, cls) {
       return '<g class="' + (cls || "wi-cloud") + '" transform="translate(' + (x || 0) + ',' + (y || 0) + ') scale(' + (scale || 1) + ')">' +
-        '<path d="' + CLOUD_PATH + '" fill="var(--cloud)" opacity="0.92"/></g>';
+        '<path d="' + CLOUD_PATH + '" fill="var(--wi-cloud)" opacity="0.96"/></g>';
     }
     function dropsSvg() {
-      return '<g stroke="var(--blue)" stroke-width="2.4" stroke-linecap="round">' +
+      return '<g stroke="var(--wi-blue)" stroke-width="2.4" stroke-linecap="round">' +
         '<line class="wi-drop" x1="25" y1="49" x2="23" y2="55"/>' +
         '<line class="wi-drop wi-drop-2" x1="34" y1="49" x2="32" y2="56"/>' +
         '<line class="wi-drop wi-drop-3" x1="43" y1="49" x2="41" y2="55"/>' +
         '</g>';
     }
     function flakesSvg() {
-      return '<g fill="var(--blue)">' +
+      return '<g fill="var(--wi-blue)">' +
         '<circle class="wi-flake" cx="25" cy="53" r="2.1"/>' +
         '<circle class="wi-flake wi-flake-2" cx="34" cy="55" r="2.1"/>' +
         '<circle class="wi-flake wi-flake-3" cx="43" cy="53" r="2.1"/>' +
@@ -1779,10 +1942,10 @@
     function sunSvg(scale) {
       return '<g transform="translate(32,31) scale(' + (scale || 1) + ') translate(-32,-31)">' +
         weatherRays(32, 31, 14, 21) +
-        '<circle cx="32" cy="31" r="9.5" fill="var(--gold)"/></g>';
+        '<circle cx="32" cy="31" r="9.5" fill="var(--wi-sun)"/></g>';
     }
     function moonSvg() {
-      return '<path d="M40 12a19 19 0 1 0 13 29A21 21 0 0 1 40 12Z" fill="var(--gold)" opacity="0.92"/>' +
+      return '<path d="M40 12a19 19 0 1 0 13 29A21 21 0 0 1 40 12Z" fill="var(--wi-sun)" opacity="0.96"/>' +
         '<circle cx="45" cy="18" r="1.4" fill="var(--bg-a)" opacity="0.6"/>';
     }
     function weatherIcon(code, isDay) {
@@ -1795,7 +1958,7 @@
       } else if (code <= 3) {
         inner = '<g transform="translate(-4,-5)">' + cloudSvg(0, 0, 0.72) + '</g>' + cloudSvg(6, 9, 0.95);
       } else if (code <= 48) {
-        inner = '<g class="wi-fog" stroke="var(--cloud)" stroke-width="3" stroke-linecap="round" opacity="0.8">' +
+        inner = '<g class="wi-fog" stroke="var(--wi-cloud)" stroke-width="3" stroke-linecap="round" opacity="0.9">' +
           '<line x1="14" y1="24" x2="50" y2="24"/><line x1="19" y1="33" x2="55" y2="33"/><line x1="12" y1="42" x2="46" y2="42"/><line x1="20" y1="51" x2="50" y2="51"/></g>';
       } else if (code <= 57) {
         inner = cloudSvg(0, -2, 0.95) + dropsSvg();
@@ -1809,7 +1972,7 @@
         inner = cloudSvg(0, -3, 0.96) + flakesSvg();
       } else {
         inner = cloudSvg(0, -5, 1) +
-          '<path class="wi-bolt" d="M35 39l-9 13h7.5l-3.5 11 13-15h-8l3.5-9Z" fill="var(--gold)"/>';
+          '<path class="wi-bolt" d="M35 39l-9 13h7.5l-3.5 11 13-15h-8l3.5-9Z" fill="var(--wi-sun)"/>';
       }
       return '<span class="wi" data-code="' + code + '"><svg viewBox="0 0 64 64" role="img" aria-hidden="true">' + inner + '</svg></span>';
     }
@@ -1994,6 +2157,8 @@
     // =========================================================
     var FEEDS = {
       malaymail: { label: "Malay Mail", url: "https://www.malaymail.com/feed/rss", color: "var(--rose)" },
+      malaysiakini: { label: "MalaysiaKini", url: "https://www.malaysiakini.com/rss/news.rss", color: "var(--rose)" },
+      worldofbuzz: { label: "World of Buzz", url: "https://worldofbuzz.com/feed/", color: "var(--rose)" },
       soompi: { label: "Soompi", url: "https://www.soompi.com/feed", color: "var(--accent)" },
       btswire: { label: "Soompi", url: "https://www.soompi.com/tag/bts/feed", color: "var(--accent)", count: 50 },
       mothership: { label: "Mothership", url: "https://mothership.sg/feed/", color: "var(--warm)" },
@@ -2052,6 +2217,7 @@
         link: link,
         source: sourceLabel,
         date: formatFeedDate(it.pubDate),
+        at: feedTime(it.pubDate),
         summary: truncate(text, 190),
         content: cleanArticleHtml(raw),
         textLen: text.length,
@@ -2088,6 +2254,7 @@
     function trimItem(it) {
       return {
         id: it.id, title: it.title, link: it.link, source: it.source, date: it.date,
+        at: it.at || 0,
         summary: it.summary,
         content: (it.content || "").slice(0, 7000),
         fullHtml: it.fullHtml ? it.fullHtml.slice(0, 10000) : "",
@@ -2124,7 +2291,8 @@
     }
 
     function fetchFeed(def) {
-      var api = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(def.url) + "&count=" + (def.count || 20);
+      var api = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(def.url) +
+        "&count=" + (def.count || 20) + "&_=" + Date.now();
       return fetch(api, { cache: "no-store" })
         .then(function (r) { return r.json(); })
         .then(function (data) {
@@ -2135,7 +2303,27 @@
         });
     }
 
-    function applyFreshNews(malaymail, soompi, mothership, dramapanda, btswire, previous) {
+    // Malay Mail's feed is frequently unreachable from feed converters, which
+    // leave a day-old cached copy behind. MalaysiaKini and World of Buzz answer
+    // directly, so the Malaysia list merges all three newest-first: fresh
+    // headlines always lead and a stale source simply falls to the bottom.
+    function mergeMalaysia(sources) {
+      var out = [], seen = {};
+      for (var s = 0; s < sources.length; s++) {
+        var list = sources[s] || [];
+        for (var i = 0; i < list.length && i < 4; i++) {
+          var it = list[i];
+          var key = String(it.title || "").toLowerCase().slice(0, 70);
+          if (!key || seen[key]) continue;
+          seen[key] = 1;
+          out.push(it);
+        }
+      }
+      out.sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
+      return out.slice(0, 7);
+    }
+
+    function applyFreshNews(fresh, previous) {
       var lists = {
         malaysia: previous.malaysia || [],
         bts: previous.bts || [],
@@ -2143,25 +2331,26 @@
         cdrama: previous.cdrama || [],
         sg: previous.sg || []
       };
-      if (malaymail) lists.malaysia = malaymail.slice(0, 7);
-      if (btswire) {
-        var bts = btswire.filter(isBtsWireItem).slice(0, 5);
+      var malaysia = mergeMalaysia([fresh.malaymail, fresh.malaysiakini, fresh.worldofbuzz]);
+      if (malaysia.length) lists.malaysia = malaysia;
+      if (fresh.btswire) {
+        var bts = fresh.btswire.filter(isBtsWireItem).slice(0, 5);
         if (bts.length) lists.bts = bts;
       }
-      if (soompi) {
-        var kd = soompi.filter(isDramaItem).slice(0, 6);
-        lists.kdrama = kd.length ? kd : soompi.slice(0, 6);
+      if (fresh.soompi) {
+        var kd = fresh.soompi.filter(isDramaItem).slice(0, 6);
+        lists.kdrama = kd.length ? kd : fresh.soompi.slice(0, 6);
       }
-      if (mothership) {
-        var sg = mothership.filter(function (it) {
+      if (fresh.mothership) {
+        var sg = fresh.mothership.filter(function (it) {
           var t = ((it.title || "") + " " + (it.summary || "")).toLowerCase();
           if (/celebrity|dating|relationship drama|influencer|tiktok|scandal|exposed|spotted|dating rumor/.test(t)) return false;
           if (/looks like|netizens react|this photo|this video/.test(t) && t.length < 60) return false;
           return true;
         });
-        lists.sg = (sg.length ? sg : mothership).slice(0, 6);
+        lists.sg = (sg.length ? sg : fresh.mothership).slice(0, 6);
       }
-      if (dramapanda) lists.cdrama = dramapanda.slice(0, 6);
+      if (fresh.dramapanda) lists.cdrama = fresh.dramapanda.slice(0, 6);
       newsState.lists = lists;
     }
 
@@ -2178,25 +2367,29 @@
         return;
       }
 
-      Promise.allSettled([
-        fetchFeed(FEEDS.malaymail),
-        fetchFeed(FEEDS.soompi),
-        fetchFeed(FEEDS.mothership),
-        fetchFeed(FEEDS.dramapanda),
-        fetchFeed(FEEDS.btswire)
-      ]).then(function (results) {
+      var sources = [
+        ["malaymail", FEEDS.malaymail],
+        ["malaysiakini", FEEDS.malaysiakini],
+        ["worldofbuzz", FEEDS.worldofbuzz],
+        ["soompi", FEEDS.soompi],
+        ["mothership", FEEDS.mothership],
+        ["dramapanda", FEEDS.dramapanda],
+        ["btswire", FEEDS.btswire]
+      ];
+      Promise.allSettled(sources.map(function (s) { return fetchFeed(s[1]); })).then(function (results) {
         if (reqId !== newsRequestId) return;
-        var settled = results.map(function (r) { return r.status === "fulfilled" ? r.value : null; });
-        var anyOk = settled.some(Boolean);
-        if (!anyOk) {
+        var fresh = {};
+        results.forEach(function (r, i) {
+          if (r.status === "fulfilled" && r.value) fresh[sources[i][0]] = r.value;
+        });
+        if (!Object.keys(fresh).length) {
           if (!newsState.lists.malaysia.length && !newsState.lists.bts.length) hydrateNews(loadNewsCache());
           setStatus("Couldn’t reach the news feeds · saved copy kept", "offline");
           return;
         }
-        var previous = newsState.lists;
-        applyFreshNews(settled[0], settled[1], settled[2], settled[3], settled[4], previous);
+        applyFreshNews(fresh, newsState.lists);
         newsState.updatedAt = Date.now();
-        newsState.partial = settled.some(function (v) { return !v; });
+        newsState.partial = results.some(function (r) { return r.status !== "fulfilled"; });
         saveNewsCache();
         renderAllNews();
         setStatus(
@@ -2231,7 +2424,7 @@
         html +=
           '<article class="feed-item" style="--i:' + i + '" data-story="' + esc(item.id) + '" tabindex="0" role="button">' +
             '<div class="feed-top">' +
-              '<span class="feed-source" style="color:' + color + '">' + esc(label) + "</span>" +
+              '<span class="feed-source" style="color:' + color + '">' + esc(item.source || label) + "</span>" +
               '<span class="feed-date">' + esc(item.date) + "</span>" +
             "</div>" +
             '<h3 class="title">' + esc(item.title) + "</h3>" +
@@ -3059,6 +3252,7 @@
       }).then(function (dataUrl) {
         thumbCache[p.id] = dataUrl;
         paintThumb(p);
+        albumPaintThumb(p);
         return dataUrl;
       }).catch(function () {
         thumbFailed[p.id] = true;
@@ -3201,14 +3395,17 @@
 
       var unseen = unseenPhotoCount();
       $("photoCount").textContent = currentPhotos.length + " photos" + (unseen ? " · " + unseen + " new" : "");
+      var startSrc = thumbOf(p) || TRANSPARENT_PX;
       $("photoContainer").innerHTML =
-        '<img class="photo-img' + (thumbOf(p) ? " is-loaded" : "") + '" src="' + (thumbOf(p) || TRANSPARENT_PX) + '" alt="Family photo" />' + nav +
+        '<img class="photo-bg' + (thumbOf(p) ? " is-loaded" : "") + '" src="' + startSrc + '" alt="" aria-hidden="true" />' +
+        '<img class="photo-img' + (thumbOf(p) ? " is-loaded" : "") + '" src="' + startSrc + '" alt="Family photo" />' + nav +
         '<div class="photo-caption">' +
           (p.caption ? esc(p.caption) : "") +
           "<small>" + esc(p.date || "") + " · " + (currentPhotoIdx + 1) + " of " + currentPhotos.length + "</small>" +
         "</div>";
 
       var imgEl = document.querySelector("#photoContainer .photo-img");
+      var bgEl = document.querySelector("#photoContainer .photo-bg");
       var fullShown = false;
 
       // Show the small thumbnail straight away; the full photo follows. The
@@ -3220,6 +3417,7 @@
           if (!dataUrl || fullShown || token !== photoRenderToken || !imgEl) return;
           imgEl.src = dataUrl;
           imgEl.classList.add("is-loaded");
+          if (bgEl) { bgEl.src = dataUrl; bgEl.classList.add("is-loaded"); }
         });
       }
 
@@ -3228,6 +3426,7 @@
       getPhotoImageUrl(p).then(function (src) {
         if (token !== photoRenderToken) return;
         fullShown = true;
+        if (bgEl) { bgEl.src = src; bgEl.classList.add("is-loaded"); }
         if (!imgEl) return;
         imgEl.src = src;
         imgEl.classList.add("is-loaded");
@@ -3260,7 +3459,7 @@
     function startCarouselTimer() {
       if (carouselTimer) clearInterval(carouselTimer);
       carouselTimer = setInterval(function () {
-        if (document.hidden || !currentPhotos.length) return;
+        if (document.hidden || albumOpen || !currentPhotos.length) return;
         currentPhotoIdx = (currentPhotoIdx + 1) % currentPhotos.length;
         renderCurrentPhoto();
       }, CAROUSEL_MS);
@@ -3291,6 +3490,7 @@
     function forgetPassphrase() {
       localStorage.removeItem("mom_family_pass");
       currentPhotos = [];
+      if (albumOpen) closeAlbum();
       photoCache = {};
       thumbCache = {};
       manifestCache = {};
@@ -3305,6 +3505,140 @@
       var thumb = e.target.closest(".photo-thumb");
       if (!thumb) return;
       selectPhoto(parseInt(thumb.getAttribute("data-i"), 10));
+    });
+
+    // =========================================================
+    // FAMILY ALBUM (full-screen grid + viewer)
+    // =========================================================
+    var albumOpen = false, albumIndex = 0, albumView = "grid", albumRenderToken = 0, albumTouchX = 0;
+
+    function albumPaintThumb(p) {
+      if (!albumOpen || !thumbCache[p.id]) return;
+      var body = $("albumBody");
+      if (!body) return;
+      var img = body.querySelector('img[data-album-id="' + p.id + '"]');
+      if (!img) return;
+      img.src = thumbCache[p.id];
+      img.classList.add("is-loaded");
+      img.removeAttribute("data-album-id");
+    }
+    function openAlbum(i) {
+      if (!currentPhotos.length) return;
+      albumIndex = (isFinite(i) && i >= 0 && i < currentPhotos.length) ? i : currentPhotoIdx;
+      albumView = "grid";
+      albumOpen = true;
+      var ov = $("albumOverlay");
+      ov.classList.add("show");
+      ov.setAttribute("aria-hidden", "false");
+      document.body.classList.add("album-open");
+      renderAlbum();
+    }
+    function closeAlbum() {
+      if (!albumOpen) return;
+      var wasSingle = albumView === "single";
+      albumOpen = false;
+      $("albumOverlay").classList.remove("show");
+      $("albumOverlay").setAttribute("aria-hidden", "true");
+      document.body.classList.remove("album-open");
+      $("albumBody").innerHTML = "";
+      if (wasSingle && currentPhotos[albumIndex]) {
+        currentPhotoIdx = albumIndex;
+        renderCurrentPhoto();
+        startCarouselTimer();
+      }
+    }
+    function setAlbumView(v) {
+      albumView = v === "single" ? "single" : "grid";
+      renderAlbum();
+    }
+    function albumStep(d) {
+      if (!currentPhotos.length) return;
+      albumIndex = (albumIndex + d + currentPhotos.length) % currentPhotos.length;
+      albumView = "single";
+      renderAlbum();
+    }
+    function renderAlbum() {
+      var body = $("albumBody");
+      if (!body || !albumOpen) return;
+      var token = ++albumRenderToken;
+      $("albumTabGrid").classList.toggle("active", albumView === "grid");
+      $("albumTabSingle").classList.toggle("active", albumView === "single");
+      $("albumSub").textContent = currentPhotos.length
+        ? currentPhotos.length + " photos · " + (albumIndex + 1) + " of " + currentPhotos.length
+        : "No photos yet";
+      if (!currentPhotos.length) {
+        body.innerHTML = '<p class="album-empty">No photos in the archive yet.</p>';
+        return;
+      }
+      if (albumView === "grid") {
+        var html = '<div class="album-grid">';
+        for (var i = 0; i < currentPhotos.length; i++) {
+          var p = currentPhotos[i];
+          var t = thumbOf(p);
+          html += '<button type="button" class="album-tile' + (i === albumIndex ? " is-current" : "") +
+            '" data-album-i="' + i + '" aria-label="Open photo ' + (i + 1) + '">' +
+            '<img src="' + (t || TRANSPARENT_PX) + '" ' +
+            (t ? 'class="is-loaded"' : 'data-album-id="' + esc(p.id) + '"') +
+            ' alt="" loading="lazy" decoding="async" /></button>';
+          if (!t) queueThumb(p);
+        }
+        body.innerHTML = html + "</div>";
+        body.scrollTop = 0;
+        return;
+      }
+      var item = currentPhotos[albumIndex];
+      var thumb = thumbOf(item);
+      body.innerHTML =
+        '<div class="album-stage">' +
+          '<img class="album-bg' + (thumb ? " is-loaded" : "") + '" src="' + (thumb || TRANSPARENT_PX) + '" alt="" aria-hidden="true" />' +
+          '<button type="button" class="album-nav prev" onclick="albumStep(-1)" aria-label="Previous photo">‹</button>' +
+          '<img class="album-main' + (thumb ? " is-loaded" : "") + '" src="' + (thumb || TRANSPARENT_PX) + '" alt="Family photo" />' +
+          '<button type="button" class="album-nav next" onclick="albumStep(1)" aria-label="Next photo">›</button>' +
+        "</div>" +
+        '<div class="album-meta"><div>' + (item.caption ? esc(item.caption) : "Family moment") +
+          "<small>" + esc(item.date || "") + "</small></div>" +
+          '<span class="album-counter">' + (albumIndex + 1) + " of " + currentPhotos.length + "</span></div>";
+      var main = body.querySelector(".album-main");
+      var bg = body.querySelector(".album-bg");
+      if (!thumb && item.thumb) {
+        loadThumbFor(item).then(function (url) {
+          if (!url || token !== albumRenderToken || albumView !== "single") return;
+          if (main && main.src === TRANSPARENT_PX) { main.src = url; main.classList.add("is-loaded"); }
+          if (bg && bg.src === TRANSPARENT_PX) { bg.src = url; bg.classList.add("is-loaded"); }
+        });
+      }
+      getPhotoImageUrl(item).then(function (src) {
+        if (token !== albumRenderToken || albumView !== "single") return;
+        if (main) { main.src = src; main.classList.add("is-loaded"); }
+        if (bg) { bg.src = src; bg.classList.add("is-loaded"); }
+      }).catch(function () {});
+    }
+    $("albumBody").addEventListener("click", function (e) {
+      var tile = e.target.closest(".album-tile");
+      if (!tile) return;
+      albumIndex = parseInt(tile.getAttribute("data-album-i"), 10) || 0;
+      albumView = "single";
+      renderAlbum();
+    });
+    $("albumBody").addEventListener("touchstart", function (e) {
+      albumTouchX = e.touches[0].clientX;
+    }, { passive: true });
+    $("albumBody").addEventListener("touchend", function (e) {
+      if (!albumOpen || albumView !== "single") return;
+      var dx = e.changedTouches[0].clientX - albumTouchX;
+      if (Math.abs(dx) > 45) albumStep(dx < 0 ? 1 : -1);
+    }, { passive: true });
+    window.addEventListener("keydown", function (e) {
+      if (!albumOpen) return;
+      if (e.key === "Escape") closeAlbum();
+      else if (e.key === "ArrowRight") albumStep(1);
+      else if (e.key === "ArrowLeft") albumStep(-1);
+    });
+    $("photoContainer").addEventListener("click", function (e) {
+      if (e.target.closest(".photo-nav") || !currentPhotos.length) return;
+      albumIndex = currentPhotoIdx;
+      openAlbum(currentPhotoIdx);
+      setAlbumView("single");
     });
 
     // =========================================================
@@ -3502,7 +3836,22 @@
           batch = {}; batchBytes = 0;
         }
 
+        var archivesStarted = 0;
         for (var i = 0; i < files.length; i++) {
+          // The 120-photo ceiling is per gist. A whole batch used to be uploaded
+          // after a single capacity check, which is how a gist ended up at
+          // "204 of 120"; roll over to a fresh gist mid-batch instead.
+          if (state.photos.length >= MAX_PHOTOS_PER_GIST) {
+            statusEl.textContent = "Archive full — starting a new secret gist…";
+            await flush();
+            var prev = state;
+            await writeManifest(prev.gist, token, prev.salt, prev.key, prev.photos, null);
+            state = await createPhotoGist(token, pass);
+            archivesStarted++;
+            try {
+              await writeManifest(prev.gist, token, prev.salt, prev.key, prev.photos, state.gist);
+            } catch (e) { /* the new gist still works as its own archive */ }
+          }
           statusEl.textContent = "Preparing photo " + (i + 1) + " of " + files.length + "…";
           var sized = await prepareImageFile(files[i]);
           var pid = newPhotoId();
@@ -3520,8 +3869,9 @@
         statusEl.textContent = "Saving the manifest…";
         await writeManifest(state.gist, token, state.salt, state.key, state.photos, state.next);
 
-        statusEl.textContent = "Added " + files.length + " photo(s). This gist now holds " +
-          state.photos.length + " of " + MAX_PHOTOS_PER_GIST + ".";
+        statusEl.textContent = "Added " + files.length + " photo(s)" +
+          (archivesStarted ? " across " + (archivesStarted + 1) + " archives" : "") +
+          ". This gist now holds " + state.photos.length + " of " + MAX_PHOTOS_PER_GIST + ".";
         fileInput.value = "";
         $("admCaption").value = "";
         manifestCache = {};
@@ -3623,6 +3973,9 @@
     hydrateNewsIfEmpty();
     loadAllData(false);
     setInterval(updateClockAndGreeting, 20000);
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) updateClockAndGreeting();
+    });
     setInterval(function () {
       if (navigator.onLine) refreshNews(false);
     }, 30 * 60 * 1000);
